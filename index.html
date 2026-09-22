@@ -1,0 +1,2289 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c4a6e">
+<meta name="description" content="أمازون كول — صيانة وتركيب وتشخيص وتجارة أجهزة التكييف">
+<title>أمازون كول | HVAC Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+/* ========== RESET & VARIABLES ========== */
+:root{
+  --bg:#090d16;--bg2:#0b1220;--card:#151d2a;--card2:#1a2330;
+  --blue:#0284c7;--blue2:#06b6d4;--green:#10b981;--amber:#f59e0b;
+  --red:#ef4444;--purple:#8b5cf6;
+  --txt:#f8fafc;--muted:#94a3b8;--muted2:#64748b;
+  --border:#26334d;--border2:#334155;
+  --shadow:0 10px 40px rgba(0,0,0,.35);
+  --radius:14px;--radius-sm:10px;--radius-lg:20px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:Tajawal,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;overflow-x:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:var(--blue2);text-decoration:none}
+img{max-width:100%;display:block}
+h1,h2,h3,h4{margin:0;line-height:1.3}
+h2{font-size:20px;font-weight:900;margin:0 0 12px 0;display:flex;align-items:center;gap:8px}
+h3{font-size:16px;font-weight:800}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px}
+  /* ========== LAYOUT ========== */
+.app{max-width:1180px;margin:0 auto;padding:12px 12px 80px}
+.top{position:sticky;top:0;z-index:50;background:rgba(9,13,22,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:10px 0;margin:0 -12px;padding-left:12px;padding-right:12px}
+.brand{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.brand-title{display:flex;flex-direction:column;gap:2px}
+.brand h1{font-size:20px;font-weight:900;letter-spacing:-.5px}
+.brand .sub{font-size:11px;color:var(--muted);letter-spacing:1px}
+.badge{padding:5px 10px;border-radius:999px;background:#10263a;color:#67e8f9;font-size:11px;font-weight:700;border:1px solid #0e4a66}
+.badge.live{background:#052e2b;color:#6ee7b7;border-color:#065f46}
+.nav{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px 0;scrollbar-width:none;scroll-snap-type:x proximity}
+.nav::-webkit-scrollbar{display:none}
+.nav button{flex:0 0 auto;border:1px solid var(--border);background:var(--card);color:var(--txt);padding:9px 13px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:all .2s;scroll-snap-align:start;white-space:nowrap}
+.nav button:hover{border-color:var(--border2)}
+.nav button.active{background:linear-gradient(135deg,var(--blue),var(--blue2));border-color:transparent;box-shadow:0 4px 14px rgba(2,132,199,.4)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:12px 0;transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.card.tight{padding:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.between{justify-content:space-between}
+.muted{color:var(--muted);font-size:13px}
+.muted-sm{color:var(--muted);font-size:11px}
+.price{font-size:20px;font-weight:900;color:#67e8f9;letter-spacing:-.5px}
+.btn{border:1px solid var(--border);background:var(--card);color:var(--txt);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover:not(:disabled){border-color:var(--border2);transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:linear-gradient(135deg,var(--blue),var(--blue2));border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(2,132,199,.35)}
+.btn.primary:hover{box-shadow:0 6px 20px rgba(2,132,199,.5)}
+.btn.green{background:#075e4a;border-color:#0b8065;color:#d1fae5}
+.btn.amber{background:#78350f;border-color:#a16207;color:#fef3c7}
+.btn.red{background:#641d25;border-color:#8e2733;color:#fecaca}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn.block{width:100%}
+.btn.ghost{background:transparent}
+.field{margin:10px 0}
+.field label{display:block;color:#cbd5e1;margin-bottom:6px;font-size:13px;font-weight:600}
+.field label .req{color:var(--red)}
+.field input,.field select,.field textarea{width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 12px;outline:none;font-size:14px;transition:border-color .15s,box-shadow .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(2,132,199,.15)}
+.field textarea{min-height:90px;resize:vertical;font-family:inherit}
+.field .hint{font-size:11px;color:var(--muted2);margin-top:4px}
+.field .error{font-size:12px;color:#fca5a5;margin-top:4px;display:none}
+.field.invalid input,.field.invalid select,.field.invalid textarea{border-color:var(--red)}
+.field.invalid .error{display:block}
+.notice{padding:12px 14px;border-radius:var(--radius-sm);background:#171f2c;border:1px solid var(--border);margin:10px 0;font-size:14px;line-height:1.6}
+.notice.ok{border-color:#065f46;background:linear-gradient(135deg,#052e2b,#062e26);color:#d1fae5}
+.notice.err{border-color:#7f1d1d;background:linear-gradient(135deg,#351216,#4c1d24);color:#fecaca}
+.notice.warn{border-color:#78350f;background:#1c1917;color:#fef3c7}
+.notice.info{border-color:#164e63;background:#082f49;color:#cffafe}
+.hidden{display:none!important}
+.search{position:relative;display:flex;gap:8px;margin:8px 0}
+.search input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 14px 11px 40px;color:var(--txt)}
+.search::before{content:"🔍";position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;opacity:.6}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:#243147;font-size:11px;font-weight:700}
+.pill.green{background:#065f46;color:#d1fae5}
+.pill.amber{background:#78350f;color:#fef3c7}
+.pill.red{background:#7f1d1d;color:#fecaca}
+.pill.blue{background:#0c4a6e;color:#cffafe}
+.pill.purple{background:#4c1d95;color:#ddd6fe}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;animation:fadeIn .2s}
+.modal.open{display:flex}
+.modalbox{width:min(560px,100%);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;max-height:90vh;overflow:auto;box-shadow:var(--shadow);animation:slideUp .25s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.modal-head h2{margin:0;font-size:18px}
+.toast-container{position:fixed;bottom:20px;left:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:380px;margin-left:auto;margin-right:0}
+.toast{background:linear-gradient(135deg,#052e2b,#065f46);color:#d1fae5;padding:12px 16px;border-radius:var(--radius-sm);border:1px solid #065f46;font-weight:700;font-size:14px;box-shadow:var(--shadow);pointer-events:auto;display:flex;align-items:center;gap:10px;animation:toastIn .3s}
+.toast.err{background:linear-gradient(135deg,#4c1d24,#7f1d1d);color:#fecaca;border-color:#7f1d1d}
+.toast.info{background:linear-gradient(135deg,#082f49,#0c4a6e);color:#cffafe;border-color:#0c4a6e}
+.toast.warn{background:linear-gradient(135deg,#1c1917,#78350f);color:#fef3c7;border-color:#78350f}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.product-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .2s;display:flex;flex-direction:column}
+.product-card:hover{border-color:var(--blue);transform:translateY(-3px);box-shadow:0 12px 30px rgba(2,132,199,.2)}
+.product-card .img{aspect-ratio:1/1;background:linear-gradient(135deg,#0d0f14,#151d2a);overflow:hidden;position:relative}
+.product-card .img img{width:100%;height:100%;object-fit:cover}
+.product-card .img .badge-discount{position:absolute;top:8px;right:8px;background:var(--red);color:#fff;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:900}
+.product-card .body{padding:12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.product-card .name{font-weight:800;font-size:14px;line-height:1.35;min-height:38px}
+.product-card .actions{margin-top:auto;display:flex;gap:6px}
+.product-card .actions .btn{flex:1}
+.timeline{position:relative;padding:10px 0;margin:10px 0}
+.timeline::before{content:"";position:absolute;right:11px;top:20px;bottom:20px;width:2px;background:var(--border)}
+.timeline-step{position:relative;padding-right:36px;padding-bottom:16px;opacity:.4;transition:opacity .3s}
+.timeline-step.active{opacity:1}
+.timeline-step.done{opacity:1}
+.timeline-step::before{content:"";position:absolute;right:4px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--border);border:3px solid var(--bg);z-index:1}
+.timeline-step.done::before{background:var(--green)}
+.timeline-step.active::before{background:var(--amber);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.7)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}
+.timeline-step .label{font-weight:700;font-size:14px}
+.timeline-step .time{font-size:11px;color:var(--muted)}
+.stat{background:linear-gradient(135deg,var(--card),var(--card2));border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.stat .num{font-size:26px;font-weight:900;color:#67e8f9;letter-spacing:-1px}
+.stat .lbl{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.stat.green .num{color:#6ee7b7}
+.stat.amber .num{color:#fbbf24}
+.stat.red .num{color:#fca5a5}
+.stat.purple .num{color:#c4b5fd}
+.hero{position:relative;margin:0 0 16px 0;border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 14px 50px rgba(2,132,199,.35)}
+.hero-bg{height:240px;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,.88) 100%),url('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80') center/cover}
+.hero-badge{position:absolute;top:14px;right:14px;background:rgba(255,153,0,.95);color:#111;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:900}
+.hero-content{position:absolute;bottom:0;left:0;right:0;padding:20px 18px}
+.hero-pill{display:inline-block;background:linear-gradient(90deg,var(--amber),var(--red));color:#fff;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:900;margin-bottom:10px}
+.hero-title{font-size:22px;font-weight:900;line-height:1.35;text-shadow:0 2px 8px rgba(0,0,0,.6);margin-bottom:8px}
+.hero-title .accent{color:#fbbf24;font-size:24px}
+.hero-sub{color:#e0f2fe;font-size:13px;line-height:1.6;margin-bottom:14px}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap}
+.emergency-card{cursor:pointer;text-align:center;padding:20px;background:linear-gradient(135deg,#7f1d1d,#450a0a);border:2px solid var(--red);border-radius:var(--radius-lg);margin:14px 0;transition:transform .2s}
+.emergency-card:hover{transform:scale(1.02)}
+.offline-banner{position:fixed;bottom:0;left:0;right:0;background:var(--red);color:#fff;text-align:center;padding:8px;font-weight:700;font-size:13px;z-index:300;display:none}
+.offline-banner.show{display:block}
+.loader{display:inline-block;width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--blue2);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{color:var(--muted);text-align:center;padding:30px 12px;font-size:12px;border-top:1px solid var(--border);margin-top:20px}
+.admin-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:12px 0}
+.admin-section h3{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.admin-section h3::after{content:"▼";font-size:10px;color:var(--muted);transition:transform .2s}
+.admin-section.collapsed h3::after{transform:rotate(-90deg)}
+.admin-section.collapsed .content{display:none}
+@media (max-width:600px){
+  .app{padding:9px 9px 70px}
+  .top{margin:0 -9px;padding-left:9px;padding-right:9px}
+  .grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .hero-bg{height:200px}
+  .hero-title{font-size:18px}
+  .hero-title .accent{font-size:20px}
+  .stat .num{font-size:22px}
+  .toast-container{left:12px;right:12px;bottom:12px;max-width:none}
+}
+@media print{
+  .top,.nav,.footer,.toast-container,.hero-actions,.btn{display:none!important}
+  body{background:#fff;color:#000}
+  .card{border:1px solid #ccc;background:#fff;color:#000;box-shadow:none}
+  .notice{background:#f5f5f5;color:#000}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== OFFLINE BANNER ========== -->
+<div class="offline-banner" id="offlineBanner">📡 لا يوجد اتصال بالإنترنت — وضع offline</div>
+
+<!-- ========== APP ========== -->
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="brand-title">
+        <h1>أمازون كول</h1>
+        <div class="sub">HVAC PRO & STORE</div>
+      </div>
+      <span id="modeBadge" class="badge">وضع تجريبي</span>
+    </div>
+    <nav class="nav" id="nav"></nav>
+  </header>
+  <main id="app"></main>
+  <footer class="footer">
+    أمازون كول — صيانة وتركيب وتشخيص وتجارة أجهزة التكييف<br>
+    <span style="font-size:11px;opacity:.6">© 2026 جميع الحقوق محفوظة</span>
+  </footer>
+</div>
+
+<!-- ========== AUTH MODAL ========== -->
+<div class="modal" id="authModal">
+  <div class="modalbox">
+    <div class="modal-head">
+      <h2 id="authTitle">تسجيل الدخول</h2>
+      <button class="btn sm" onclick="closeAuth()">✕</button>
+    </div>
+    <div id="authMsg"></div>
+    <form onsubmit="submitAuth(event)" novalidate>
+      <div id="nameWrap" class="field hidden">
+        <label>الاسم الكامل</label>
+        <input id="authName" placeholder="أحمد محمد">
+      </div>
+      <div id="phoneWrap" class="field hidden">
+        <label>رقم الهاتف</label>
+        <input id="authPhone" type="tel" placeholder="01xxxxxxxxx">
+      </div>
+      <div class="field" id="emailField">
+        <label>البريد الإلكتروني <span class="req">*</span></label>
+        <input id="authEmail" type="email" placeholder="you@example.com" required>
+        <div class="error">بريد غير صحيح</div>
+      </div>
+      <div class="field" id="passField">
+        <label>كلمة المرور <span class="req">*</span></label>
+        <input id="authPassword" type="password" minlength="6" placeholder="6 أحرف على الأقل" required>
+        <div class="error">كلمة المرور 6 أحرف على الأقل</div>
+      </div>
+      <button class="btn primary block" id="authSubmit" type="submit" style="padding:13px">دخول</button>
+    </form>
+    <button class="btn block" style="margin-top:8px" onclick="toggleAuthMode()" id="authSwitch">إنشاء حساب جديد</button>
+    <div style="display:flex;align-items:center;gap:10px;margin:16px 0">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span class="muted-sm">أو</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+    <button onclick="loginWithGoogle()" class="btn block" style="background:#fff;color:#333;border-color:#ddd;padding:12px;margin-bottom:8px;font-weight:700">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20.4H24v7.2h11.2c-1.6 4.6-6 7.9-11.2 7.9-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.1-5.1C34 6.8 29.3 5 24 5 13.5 5 5 13.5 5 24s8.5 19 19 19c10.5 0 19-8.5 19-19 0-1.3-.1-2.5-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6 4.4C14 15.6 18.6 13 24 13c3.1 0 5.9 1.2 8 3.1l5.1-5.1C34 6.8 29.3 5 24 5c-7.6 0-14.1 4.3-17.7 9.7z"/><path fill="#4CAF50" d="M24 43c5.2 0 9.9-1.8 13.6-4.8l-6.1-5.2C29.5 34.6 26.9 35.5 24 35.5c-5.2 0-9.5-3.3-11.1-7.9l-6 4.6C10.5 38.5 16.8 43 24 43z"/><path fill="#1976D2" d="M43.6 20.5H42V20.4H24v7.2h11.2c-.7 2.2-2 4.1-3.7 5.5l6.1 5.2C41.2 34.9 43 30 43 24c0-1.3-.1-2.5-.4-3.5z"/></svg>
+      الدخول بحساب Google
+    </button>
+    <button onclick="loginWithFacebook()" class="btn block" style="background:#1877F2;color:#fff;border:none;padding:12px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      الدخول بحساب Facebook
+    </button>
+  </div>
+</div>
+<!-- ========== CONFIRM MODAL ========== -->
+<div class="modal" id="confirmModal">
+  <div class="modalbox" style="max-width:420px">
+    <div class="modal-head"><h2 id="confirmTitle">تأكيد</h2></div>
+    <p id="confirmMsg" style="margin:0 0 18px 0;font-size:15px;line-height:1.7"></p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn" onclick="closeConfirm(false)" id="confirmNo">إلغاء</button>
+      <button class="btn primary" onclick="closeConfirm(true)" id="confirmYes">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== INPUT MODAL ========== -->
+<div class="modal" id="inputModal">
+  <div class="modalbox" style="max-width:420px">
+    <div class="modal-head"><h2 id="inputTitle">إدخال</h2></div>
+    <div class="field">
+      <label id="inputLabel">القيمة</label>
+      <input id="inputField">
+      <div class="error" id="inputError"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn" onclick="closeInput(null)">إلغاء</button>
+      <button class="btn primary" onclick="submitInput()">موافق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== INVOICE MODAL ========== -->
+<div class="modal" id="invoiceModal">
+  <div class="modalbox">
+    <div class="modal-head">
+      <h2>🧾 فاتورة</h2>
+      <button class="btn sm" onclick="closeInvoice()">✕</button>
+    </div>
+    <div id="invoiceContent"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary block" onclick="printInvoice()">🖨️ طباعة / PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== RATING MODAL ========== -->
+<div class="modal" id="ratingModal">
+  <div class="modalbox" style="max-width:420px">
+    <div class="modal-head"><h2>⭐ قيّم الخدمة</h2></div>
+    <p class="muted" style="text-align:center;margin-bottom:12px">رأيك يهمنا لتطوير خدمتنا</p>
+    <div id="ratingStars" style="display:flex;justify-content:center;gap:8px;font-size:36px;margin:12px 0;cursor:pointer"></div>
+    <div class="field">
+      <label>ملاحظات (اختياري)</label>
+      <textarea id="ratingComment" placeholder="اكتب ملاحظاتك..." style="min-height:70px"></textarea>
+    </div>
+    <div class="row">
+      <button class="btn primary block" onclick="submitRating()">إرسال التقييم</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TOASTS ========== -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+/* ============================================================
+   أمازون كول — HVAC Pro
+   Single-File Application v2.0
+   ============================================================ */
+  /* ============================================================
+   1) CONFIG
+   ============================================================ */
+const CONFIG = {
+  SUPABASE_URL: 'YOUR_SUPABASE_PROJECT_URL',
+  SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY',
+  WHATSAPP_NUMBER: '201275998196',
+  DEMO_MODE: true,
+  GEMINI_API_KEY: '',
+  CURRENCY: 'ج.م',
+  APP_VERSION: '2.0.0'
+};
+
+const CALLMEBOT_PHONE = '201275998196';
+const CALLMEBOT_KEY = '';
+
+const ADMIN_EMAILS = [
+  'admin@amazoncool.com',
+  'ismailsalahali482@gmail.com'
+];
+
+/* ============================================================
+   2) LOGGER
+   ============================================================ */
+const LOG = {
+  info: (...a) => console.log('%c[HVAC]', 'color:#67e8f9;font-weight:900', ...a),
+  ok:   (...a) => console.log('%c[HVAC ✅]', 'color:#10b981;font-weight:900', ...a),
+  err:  (...a) => console.error('%c[HVAC ❌]', 'color:#ef4444;font-weight:900', ...a),
+  warn: (...a) => console.warn('%c[HVAC ⚠️]', 'color:#f59e0b;font-weight:900', ...a)
+};
+
+LOG.info('🚀 بدء التطبيق — الإصدار', CONFIG.APP_VERSION);
+
+/* ============================================================
+   3) STORAGE
+   ============================================================ */
+const STORAGE_PREFIX = 'ac_';
+
+function safeRead(key, fallback) {
+  try {
+    const s = localStorage.getItem(STORAGE_PREFIX + key);
+    if (!s || s === 'null' || s === 'undefined') return fallback;
+    const parsed = JSON.parse(s);
+    return parsed === null || parsed === undefined ? fallback : parsed;
+  } catch (e) {
+    LOG.err('Safe read failed:', key, e);
+    return fallback;
+  }
+}
+
+function safeWrite(key, val) {
+  try {
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(val));
+  } catch (e) {
+    LOG.err('Safe write failed:', key, e);
+  }
+}
+
+function safeRemove(key) {
+  try { localStorage.removeItem(STORAGE_PREFIX + key); } catch (e) {}
+}
+
+/* ============================================================
+   4) DATABASE CONNECTION
+   ============================================================ */
+const isConfigured = CONFIG.SUPABASE_URL.startsWith('https://') && !CONFIG.SUPABASE_URL.includes('YOUR_');
+const DEMO = CONFIG.DEMO_MODE || !isConfigured;
+const db = (!DEMO && window.supabase)
+  ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
+  : null;
+
+LOG.info('وضع التشغيل:', DEMO ? 'تجريبي (localStorage)' : 'Supabase متصل');
+
+/* ============================================================
+   5) DEFAULT DATA
+   ============================================================ */
+const DEFAULT_PRODUCTS = [
+  { id:'p1', name:'Carrier Optimax Inverter 1.5 HP', price:28500, brand:'Carrier', stock:5, discount:0, emoji:'❄️', image:'https://placehold.co/400x300/0284c7/ffffff?text=Carrier', description:'جهاز تكييف إنفرتر موفر للطاقة' },
+  { id:'p2', name:'Sharp Inverter Plasma 2.25 HP', price:37200, brand:'Sharp', stock:4, discount:0, emoji:'💨', image:'https://placehold.co/400x300/10b981/ffffff?text=Sharp', description:'تكييف إنفرتر بتقنية Plasma' },
+  { id:'p3', name:'LG Dual Inverter 1.5 HP', price:31000, brand:'LG', stock:4, discount:0, emoji:'❄️', image:'https://placehold.co/400x300/a855f7/ffffff?text=LG', description:'تكييف LG Dual Inverter' },
+  { id:'p4', name:'Gree Polar Split 3 HP', price:42000, brand:'Gree', stock:3, discount:0, emoji:'🌬️', image:'https://placehold.co/400x300/f59e0b/111111?text=Gree', description:'تكييف سبليت 3 حصان' },
+  { id:'p5', name:'Fresh Turbo Black 1.5 HP', price:21500, brand:'Fresh', stock:6, discount:0, emoji:'🖤', image:'https://placehold.co/400x300/3b82f6/ffffff?text=Fresh', description:'تكييف Fresh Turbo' },
+  { id:'p6', name:'Carrier Concealed 3 HP', price:54000, brand:'Carrier', stock:2, discount:0, emoji:'🏢', image:'https://placehold.co/400x300/ef4444/ffffff?text=Carrier', description:'تكييف كونسيلد للسقف' }
+];
+
+const DEFAULT_ADS = [
+  { id:'ad1', title:'عرض خاص على Carrier Optimax', body:'خصم يصل لـ 15% لفترة محدودة على أجهزة Carrier Inverter.', productId:'p1', emoji:'🔥', color:'#ef4444', active:true },
+  { id:'ad2', title:'جديدنا: Sharp Plasma Cluster', body:'أحدث موديلات Sharp بتقنية Plasma لتنقية الهواء.', productId:'p2', emoji:'✨', color:'#10b981', active:true }
+];
+
+const DEFAULT_COUPONS = [
+  { code:'SAVE10', discount:10, active:true, minOrder:0, maxDiscount:0 },
+  { code:'SAVE20', discount:20, active:true, minOrder:50000, maxDiscount:0 },
+  { code:'WELCOME', discount:5, active:true, minOrder:0, maxDiscount:0 }
+];
+
+const DEFAULT_PIPE_PRICES = {
+  perMeter: { 1.5:150, 2.25:180, 3:200, 4:250, 5:300 },
+  typeMultiplier: { standard:1, hidden:1.4, decor:1.7 },
+  accessories: 350,
+  installPerUnit: 400,
+  discount2Units: 5,
+  discount3PlusUnits: 10
+};
+
+const FAULT_DB = [
+  ['Carrier','E1','حساس حرارة الغرفة','افحص حساس الوحدة الداخلية والفيشة والمقاومة والأسلاك.'],
+  ['Carrier','E2','حساس المبخر','افحص حساس المبخر والتوصيلات وقيمة المقاومة.'],
+  ['Carrier','E3','حساس المكثف/الضاغط','راجع كود الموديل ودائرة الحساس والكونكتور.'],
+  ['Carrier','E4','حماية/عطل حرارة أو ضغط','افحص الضغوط، المراوح، نظافة المكثف ودائرة الحماية.'],
+  ['Midea','E1','اتصال بين الوحدتين','افحص كابل الاتصال والتغذية والأرضي واللوحات.'],
+  ['Midea','E5','حماية تيار/جهد','قِس الجهد والتيار وافحص الضاغط ودائرة القدرة.'],
+  ['Midea','E6','عطل مروحة الداخلية','افحص موتور المروحة، الأسلاك واللوحة.'],
+  ['Sharp','E1','حساس حرارة','افحص الحساس والمقاومة والتوصيلات.'],
+  ['Sharp','E6','حماية/اتصال حسب السلسلة','حدد الموديل الكامل قبل استبدال أي جزء.'],
+  ['Sharp','H1','إزالة ثلج/Defrost','افحص الحساس، الصمام، المروحة وتدفق الهواء.'],
+  ['LG','CH01','حساس هواء داخلي','افحص حساس الغرفة والكونكتور.'],
+  ['LG','CH02','حساس مبخر','افحص حساس المبخر والتوصيلات.'],
+  ['LG','CH05','اتصال داخلي/خارجي','افحص كابل الاتصال والتغذية واللوحات.'],
+  ['LG','CH21','حماية تيار مستمر/ضاغط','افحص الضاغط وIPM والجهد والتيار.'],
+  ['Gree','E1','ضغط مرتفع','افحص نظافة المكثف، المروحة، الشحنة والعوائق.'],
+  ['Gree','E2','تجمد/ضغط منخفض','افحص تدفق الهواء، الفلاتر والشحنة.'],
+  ['Gree','E6','اتصال','افحص أسلاك الاتصال واللوحات.'],
+  ['Fresh','E1','حساس/اتصال حسب الموديل','حدد الموديل الكامل قبل التشخيص النهائي.'],
+  ['Unionaire','E1','حساس/اتصال حسب السلسلة','افحص الحساسات والتوصيلات واللوحة.'],
+  ['Unionaire','E6','اتصال أو مروحة','راجع دليل الموديل وافحص التغذية والـfeedback.']
+];
+  /* ============================================================
+   6) STATE
+   ============================================================ */
+const state = {
+  user: null,
+  profile: null,
+  role: DEMO ? 'admin' : 'guest',
+  page: 'home',
+  emergency: false,
+  authMode: 'login',
+  cart: safeRead('cart', []),
+  appliedCoupon: null,
+  ratingOrderId: null,
+  ratingValue: 0
+};
+
+/* ============================================================
+   7) DATA (LOADED/SAVED)
+   ============================================================ */
+let products = safeRead('products', null) || DEFAULT_PRODUCTS.map(p => ({ ...p }));
+let ads = safeRead('ads', null) || DEFAULT_ADS.map(a => ({ ...a }));
+let coupons = safeRead('coupons', null) || DEFAULT_COUPONS.map(c => ({ ...c }));
+let pipePrices = safeRead('pipe_prices', null) || JSON.parse(JSON.stringify(DEFAULT_PIPE_PRICES));
+
+const saveProducts = () => safeWrite('products', products);
+const saveAds = () => safeWrite('ads', ads);
+const saveCoupons = () => safeWrite('coupons', coupons);
+const savePipePrices = () => safeWrite('pipe_prices', pipePrices);
+const saveCart = () => safeWrite('cart', state.cart);
+
+LOG.info('📊 تم التحميل:', products.length, 'منتج،', ads.length, 'إعلان،', coupons.length, 'كوبون');
+
+/* ============================================================
+   8) HELPERS
+   ============================================================ */
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>'"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c]));
+
+const money = (n) => Number(n || 0).toLocaleString('ar-EG') + ' ' + CONFIG.CURRENCY;
+
+const uid = (prefix = 'id') => prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+const cartCount = () => state.cart.reduce((a, x) => a + x.qty, 0);
+
+const cartTotal = () => state.cart.reduce((s, x) => s + x.price * x.qty, 0);
+
+const isAdmin = () => state.user && (state.role === 'admin' || ADMIN_EMAILS.includes(state.user.email));
+
+const getFinalPrice = (p) => p.discount > 0 ? Math.round(p.price * (100 - p.discount) / 100) : p.price;
+
+const formatDate = (iso) => {
+  try { return new Date(iso).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }); }
+  catch { return iso; }
+};
+
+const formatArabicDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
+  } catch { return dateStr; }
+};
+
+const setPage = (p) => {
+  if (state.page === p) return;
+  LOG.info('🧭 الانتقال إلى:', p);
+  state.page = p;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  render();
+};
+
+/* ============================================================
+   9) UI COMPONENTS — Toast / Confirm / Input
+   ============================================================ */
+const Toast = {
+  show(msg, type = 'ok', duration = 2500) {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    const icons = { ok:'✅', err:'❌', info:'ℹ️', warn:'⚠️' };
+    el.innerHTML = '<span>' + (icons[type] || '') + '</span><span>' + esc(msg) + '</span>';
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => {
+      el.style.transition = 'opacity .3s, transform .3s';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(20px)';
+      setTimeout(() => el.remove(), 300);
+    }, duration);
+  },
+  ok: (m) => Toast.show(m, 'ok'),
+  err: (m) => Toast.show(m, 'err', 3500),
+  info: (m) => Toast.show(m, 'info'),
+  warn: (m) => Toast.show(m, 'warn', 3000)
+};
+
+const Confirm = {
+  _resolve: null,
+  ask(msg, title = 'تأكيد', yesText = 'تأكيد', noText = 'إلغاء') {
+    return new Promise((resolve) => {
+      this._resolve = resolve;
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMsg').textContent = msg;
+      document.getElementById('confirmYes').textContent = yesText;
+      document.getElementById('confirmNo').textContent = noText;
+      document.getElementById('confirmModal').classList.add('open');
+    });
+  }
+};
+function closeConfirm(val) {
+  document.getElementById('confirmModal').classList.remove('open');
+  if (Confirm._resolve) { Confirm._resolve(val); Confirm._resolve = null; }
+}
+
+const InputPrompt = {
+  _resolve: null,
+  ask(label, placeholder = '', title = 'إدخال', type = 'text') {
+    return new Promise((resolve) => {
+      this._resolve = resolve;
+      document.getElementById('inputTitle').textContent = title;
+      document.getElementById('inputLabel').textContent = label;
+      const inp = document.getElementById('inputField');
+      inp.value = '';
+      inp.placeholder = placeholder;
+      inp.type = type;
+      inp.classList.remove('invalid');
+      document.getElementById('inputError').style.display = 'none';
+      document.getElementById('inputModal').classList.add('open');
+      setTimeout(() => inp.focus(), 100);
+    });
+  }
+};
+function closeInput(val) {
+  document.getElementById('inputModal').classList.remove('open');
+  if (InputPrompt._resolve) { InputPrompt._resolve(val); InputPrompt._resolve = null; }
+}
+function submitInput() {
+  const val = document.getElementById('inputField').value.trim();
+  closeInput(val || null);
+  }
+  /* ============================================================
+   10) AUTH
+   ============================================================ */
+function openAuth() {
+  document.getElementById('authModal').classList.add('open');
+  document.getElementById('authMsg').innerHTML = '';
+  setAuthMode('login');
+}
+function closeAuth() {
+  document.getElementById('authModal').classList.remove('open');
+}
+function toggleAuthMode() {
+  setAuthMode(state.authMode === 'login' ? 'signup' : 'login');
+}
+function setAuthMode(m) {
+  state.authMode = m;
+  document.getElementById('authTitle').textContent = m === 'login' ? 'تسجيل الدخول' : 'إنشاء حساب';
+  document.getElementById('authSubmit').textContent = m === 'login' ? 'دخول' : 'إنشاء الحساب';
+  document.getElementById('authSwitch').textContent = m === 'login' ? 'إنشاء حساب جديد' : 'لدي حساب';
+  document.getElementById('nameWrap').classList.toggle('hidden', m === 'login');
+  document.getElementById('phoneWrap').classList.toggle('hidden', m === 'login');
+}
+function saveSession() {
+  if (state.user) safeWrite('current_user', {
+    id: state.user.id,
+    email: state.user.email,
+    full_name: state.profile?.full_name || state.user.full_name || '',
+    phone: state.profile?.phone || state.user.phone || '',
+    role: state.role || 'client'
+  });
+}
+function clearSession() {
+  safeRemove('current_user');
+  LOG.info('🗑️ تم مسح الجلسة');
+}
+
+async function submitAuth(e) {
+  e.preventDefault();
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const name = (document.getElementById('authName').value || '').trim();
+  const phone = (document.getElementById('authPhone').value || '').trim();
+
+  const emailField = document.getElementById('emailField');
+  const passField = document.getElementById('passField');
+  emailField.classList.remove('invalid');
+  passField.classList.remove('invalid');
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    emailField.classList.add('invalid');
+    return;
+  }
+  if (password.length < 6) {
+    passField.classList.add('invalid');
+    return;
+  }
+
+  LOG.info('🔑 محاولة', state.authMode === 'login' ? 'دخول' : 'تسجيل', 'لـ:', email);
+
+  if (DEMO) {
+    let users = safeRead('users', []);
+    if (state.authMode === 'signup') {
+      if (users.some(u => u.email === email)) {
+        document.getElementById('authMsg').innerHTML = '<div class="notice err">البريد مستخدم بالفعل</div>';
+        return;
+      }
+      const isFirst = users.length === 0;
+      const u = { id: uid('u'), email, password, full_name: name || 'عميل جديد', phone, role: isFirst ? 'admin' : 'client', created_at: new Date().toISOString() };
+      users.push(u);
+      safeWrite('users', users);
+      state.user = u;
+      state.profile = u;
+      state.role = u.role;
+      LOG.ok('✅ حساب جديد:', email, '- role:', u.role);
+    } else {
+      const found = users.find(u => u.email === email && u.password === password);
+      if (!found) {
+        document.getElementById('authMsg').innerHTML = '<div class="notice err">البريد أو كلمة المرور غير صحيحة</div>';
+        LOG.err('فشل الدخول:', email);
+        return;
+      }
+      state.user = found;
+      state.profile = found;
+      state.role = found.role || 'client';
+      LOG.ok('✅ تسجيل دخول:', email);
+    }
+    saveSession();
+    closeAuth();
+    Toast.ok('مرحباً بك ' + (state.profile.full_name || email));
+    render();
+    return;
+  }
+
+  try {
+    let result;
+    if (state.authMode === 'signup') {
+      result = await db.auth.signUp({ email, password });
+      if (result.error) throw result.error;
+      if (result.data.user) {
+        await db.from('users_profile').insert({
+          id: result.data.user.id,
+          full_name: name || 'عميل جديد',
+          phone: phone || null,
+          role: 'client'
+        });
+        state.user = result.data.user;
+        state.role = 'client';
+      }
+    } else {
+      result = await db.auth.signInWithPassword({ email, password });
+      if (result.error) throw result.error;
+      state.user = result.data.user;
+      state.role = 'client';
+    }
+    saveSession();
+    closeAuth();
+    Toast.ok('تم بنجاح');
+    render();
+  } catch (err) {
+    document.getElementById('authMsg').innerHTML = '<div class="notice err">' + esc(err.message) + '</div>';
+    LOG.err('Auth error:', err.message);
+  }
+}
+
+async function loginWithGoogle() {
+  if (DEMO) {
+    Toast.info('سيتم تفعيل Google بعد الربط بـ Supabase ورفع التطبيق');
+    return;
+  }
+  try {
+    const r = await db.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    if (r.error) throw r.error;
+  } catch (e) {
+    Toast.err('تعذر الاتصال بـ Google: ' + e.message);
+  }
+}
+
+async function loginWithFacebook() {
+  if (DEMO) {
+    Toast.info('سيتم تفعيل Facebook بعد الربط بـ Supabase ورفع التطبيق');
+    return;
+  }
+  try {
+    const r = await db.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: location.origin + location.pathname } });
+    if (r.error) throw r.error;
+  } catch (e) {
+    Toast.err('تعذر الاتصال بـ Facebook: ' + e.message);
+  }
+}
+
+async function logout() {
+  const ok = await Confirm.ask('هل تريد تسجيل الخروج؟', 'خروج', 'نعم، اخرج', 'إلغاء');
+  if (!ok) return;
+  state.user = null;
+  state.profile = null;
+  state.role = DEMO ? 'admin' : 'guest';
+  state.appliedCoupon = null;
+  clearSession();
+  if (!DEMO && db) await db.auth.signOut();
+  Toast.info('تم تسجيل الخروج');
+  setPage('home');
+}
+
+/* ============================================================
+   11) NAV & RENDER
+   ============================================================ */
+function navItems() {
+  const items = [
+    ['home', '🏠 الرئيسية'],
+    ['store', '🛒 المتجر'],
+    ['ads', '📢 الإعلانات'],
+    ['diagnosis', '🤖 التشخيص'],
+    ['calculators', '🧮 الحاسبات'],
+    ['services', '🔧 الخدمات'],
+    ['orders', '📋 طلباتي'],
+    ['tech_dashboard', '👷 الفني']
+  ];
+  items.push(['cart', '🛍️ السلة (' + cartCount() + ')']);
+  if (isAdmin()) items.push(['admin', '⚙️ الإدارة']);
+  return items;
+}
+
+function renderNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = navItems().map(x =>
+    '<button class="' + (state.page === x[0] ? 'active' : '') + '" onclick="setPage(\'' + x[0] + '\')">' + x[1] + '</button>'
+  ).join('') + (state.user
+    ? '<button onclick="logout()" style="color:#fca5a5">🚪 خروج</button>'
+    : '<button onclick="openAuth()" style="color:#67e8f9">🔐 دخول</button>');
+}
+
+function render() {
+  try {
+    renderNav();
+    const badge = document.getElementById('modeBadge');
+    badge.textContent = DEMO ? '🧪 تجريبي' : '🟢 متصل';
+    badge.className = 'badge' + (DEMO ? '' : ' live');
+    document.getElementById('app').innerHTML = pages[state.page] ? pages[state.page]() : pages.home();
+    postRender();
+  } catch (e) {
+    LOG.err('Render error:', e);
+    document.getElementById('app').innerHTML = '<div class="notice err">حدث خطأ: ' + esc(e.message) + '</div>';
+  }
+}
+
+/* ============================================================
+   12) PAGES
+   ============================================================ */
+const pages = {
+
+  home: () => `
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-badge">🏆 الأفضل في مصر</div>
+    <div class="hero-content">
+      <div class="hero-pill">⚡ خدمة تركيب مواسير احترافية</div>
+      <div class="hero-title">
+        محتاج تأسّس شقتك أو شركتك تكييف؟<br>
+        <span class="accent">أمازون كول هي اختيارك</span>
+      </div>
+      <div class="hero-sub">خايف من الأسعار النار؟ <b style="color:#fff">مع أمازون كول إنت اللي تحدد سعرك بنفسك</b></div>
+      <div class="hero-actions">
+        <button onclick="setPage('services')" class="btn" style="background:var(--amber);color:#111;font-weight:900;border:none;padding:11px 18px">🔧 اطلب تأسيس الآن</button>
+        <button onclick="setPage('calculators')" class="btn" style="background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-weight:900;padding:11px 18px">🧮 احسب سعرك</button>
+      </div>
+    </div>
+  </div>
+  <div style="background:linear-gradient(135deg,#0c4a6e,#155e75);padding:12px 18px;display:flex;justify-content:space-around;text-align:center;font-size:11px;color:#cffafe">
+    <div>⚡ <b style="color:#fff">سرعة تنفيذ</b></div>
+    <div>🎯 <b style="color:#fff">سعر واضح</b></div>
+    <div>🛡️ <b style="color:#fff">ضمان سنة</b></div>
+  </div>
+</section>
+
+${state.user ? '<div class="notice ok">👋 أهلاً ' + esc(state.profile?.full_name || state.user.email) + '</div>' : ''}
+
+<div class="emergency-card" onclick="goEmergency()">
+  <div style="font-size:42px">🚨</div>
+  <h3 style="color:#fff;margin:8px 0;font-size:18px">طوارئ — تكييفك عطلان؟</h3>
+  <p style="color:#fecaca;font-size:13px;margin:0">فني متخصص خلال 3 ساعات — اضغط للحجز الفوري</p>
+  <div style="margin-top:12px;display:inline-block;background:var(--red);color:#fff;padding:9px 22px;border-radius:10px;font-weight:900;font-size:13px">🔴 اطلب الآن</div>
+</div>
+
+<div style="text-align:center;margin:22px 0 12px 0">
+  <h2 style="justify-content:center">🎯 كل اللي محتاجه</h2>
+  <p class="muted" style="margin:0">اختار القسم</p>
+</div>
+
+<div class="card" style="cursor:pointer;text-align:center;padding:18px;background:linear-gradient(135deg,#0c4a6e,#155e75);border:2px solid #06b6d4;margin:0 0 12px 0" onclick="setPage('tech_join')">
+  <div style="font-size:34px">👷‍♂️</div>
+  <div style="font-weight:800;margin-top:8px;font-size:14px">انضم لفريق الفنيين</div>
+  <div class="muted-sm" style="margin-top:3px">سجل بياناتك واجتز الاختبار</div>
+</div>
+
+<div class="grid">
+  ${[
+    ['store', '🛒', 'المتجر', 'أجهزة تكييف'],
+    ['services', '🔧', 'اطلب فني', 'تركيب وصيانة'],
+    ['diagnosis', '🤖', 'شخّص العطل', 'بالذكاء الاصطناعي'],
+    ['ads', '📢', 'الإعلانات', 'عروض وخصومات'],
+    ['calculators', '🧮', 'الحاسبات', 'BTU ومواسير'],
+    ['orders', '📋', 'طلباتي', 'تابع حالاتك']
+  ].map(x => `
+    <div class="card" style="cursor:pointer;text-align:center;padding:18px 10px;margin:0" onclick="setPage('${x[0]}')">
+      <div style="font-size:34px">${x[1]}</div>
+      <div style="font-weight:800;margin-top:8px;font-size:14px">${x[2]}</div>
+      <div class="muted-sm" style="margin-top:3px">${x[3]}</div>
+    </div>
+  `).join('')}
+</div>`,
+
+  store: () => `<h2>🛒 المتجر</h2>
+<div class="search"><input id="productSearch" placeholder="ابحث عن جهاز أو ماركة..." oninput="filterProducts()"></div>
+<div class="row" style="margin:10px 0">
+  <select id="sortSelect" onchange="filterProducts()" class="field" style="flex:1;min-width:140px;margin:0;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--txt)">
+    <option value="default">الترتيب الافتراضي</option>
+    <option value="priceLow">السعر: الأقل أولاً</option>
+    <option value="priceHigh">السعر: الأعلى أولاً</option>
+    <option value="nameAz">الاسم: أ - ي</option>
+  </select>
+  <input id="priceMin" type="number" placeholder="من (ج.م)" oninput="filterProducts()" style="flex:1;min-width:90px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;color:var(--txt)">
+  <input id="priceMax" type="number" placeholder="إلى (ج.م)" oninput="filterProducts()" style="flex:1;min-width:90px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;color:var(--txt)">
+</div>
+<div id="productGrid" class="grid"></div>`,
+    ads: () => {
+    const active = ads.filter(a => a.active);
+    if (!active.length) return '<h2>📢 الإعلانات</h2><div class="notice info">لا توجد إعلانات حالياً.</div>';
+    return '<h2>📢 الإعلانات والعروض</h2>' + active.map(a => {
+      const p = products.find(x => x.id === a.productId);
+      const final = p ? getFinalPrice(p) : 0;
+      return `<div class="card" style="border-right:5px solid ${a.color || '#ff9900'};background:linear-gradient(135deg,#151d2a,#1a2330)">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="font-size:36px">${a.emoji || '📢'}</div>
+          <div style="flex:1">
+            <h3 style="margin:0 0 6px 0">${esc(a.title)}</h3>
+            <p class="muted" style="margin:0 0 10px 0">${esc(a.body)}</p>
+            ${p ? `<div style="background:var(--bg2);padding:10px;border-radius:10px;border:1px solid var(--border)">
+              <div style="font-weight:700">${esc(p.emoji || '📦')} ${esc(p.name)}</div>
+              <div class="price" style="margin:6px 0">${money(final)}${p.discount > 0 ? ' <span style="font-size:13px;color:#f87171;text-decoration:line-through">' + money(p.price) + '</span>' : ''}</div>
+              <button class="btn primary" onclick="addCart('${p.id}');setPage('cart')">🛒 اطلبه الآن</button>
+            </div>` : '<div class="muted">المنتج غير متوفر</div>'}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  cart: () => {
+    const subtotal = cartTotal();
+    const c = state.appliedCoupon ? coupons.find(x => x.code === state.appliedCoupon) : null;
+    let discount = 0;
+    if (c) {
+      discount = Math.round(subtotal * c.discount / 100);
+      if (c.maxDiscount && discount * 100 > c.maxDiscount) discount = Math.round(c.maxDiscount / 100);
+    }
+    const final = subtotal - discount;
+
+    if (!state.cart.length) return `<h2>🛍️ السلة</h2>
+      <div class="notice info" style="text-align:center;padding:40px 20px">
+        <div style="font-size:56px;margin-bottom:12px">🛒</div>
+        <p style="margin:0 0 16px 0">السلة فارغة</p>
+        <button class="btn primary" onclick="setPage('store')">اذهب للمتجر</button>
+      </div>`;
+
+    return `<h2>🛍️ السلة (${cartCount()} عنصر)</h2>
+    <div class="card">
+      ${state.cart.map((x, i) => `
+        <div style="display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);padding:12px 0;align-items:center">
+          <div style="flex:1">
+            <b>${esc(x.name)}</b>
+            <div class="muted">${money(x.price)} × ${x.qty}</div>
+          </div>
+          <div class="row" style="gap:4px">
+            <button class="btn sm" onclick="changeQty(${i},-1)">−</button>
+            <span style="min-width:24px;text-align:center;font-weight:700">${x.qty}</span>
+            <button class="btn sm" onclick="changeQty(${i},1)">+</button>
+            <button class="btn sm red" onclick="removeCart(${i})">🗑️</button>
+          </div>
+        </div>
+      `).join('')}
+      <div style="margin-top:14px;padding-top:14px;border-top:2px solid var(--border)">
+        <div class="row between"><span class="muted">المجموع الفرعي:</span><b>${money(subtotal)}</b></div>
+        ${c ? `<div class="row between" style="color:#f87171"><span>الخصم (${c.discount}%):</span><b>−${money(discount)}</b></div>` : ''}
+        ${c ? `<div class="row between" style="margin-top:8px;font-size:20px"><span>المطلوب:</span><b style="color:#10b981">${money(final)}</b></div>` : ''}
+      </div>
+    </div>
+    ${state.appliedCoupon ? `<div class="notice ok row between"><span>🎟️ كود مُطبّق: <b>${esc(state.appliedCoupon)}</b></span><button class="btn sm red" onclick="removeCoupon()">إزالة</button></div>` : ''}
+    <div class="row" style="margin-top:12px">
+      <button class="btn amber" onclick="promptCoupon()">🎟️ كود خصم</button>
+      <button class="btn primary" style="flex:1" onclick="checkoutCart()">✅ تأكيد الطلب</button>
+      <button class="btn" onclick="clearCart()">تفريغ</button>
+    </div>`;
+  },
+
+  services: () => `<h2>🔧 طلب خدمة</h2>
+${state.emergency ? `<div class="card" style="background:linear-gradient(135deg,#7f1d1d,#450a0a);border:2px solid var(--red);text-align:center">
+  <div style="font-size:44px">🚨</div>
+  <h3 style="color:#fff;margin:8px 0">خدمة الطوارئ مفعّلة</h3>
+  <p style="color:#fecaca;font-size:13px;margin:0">سيصلك فني خلال 3 ساعات كحد أقصى</p>
+</div>` : ''}
+
+<div class="card">
+  <h3 style="margin-bottom:12px">🛠️ تفاصيل الخدمة</h3>
+  <div class="field"><label>نوع الخدمة</label>
+    <select id="svcType">
+      <option value="installation">🔧 تركيب تكييف</option>
+      <option value="uninstall">🔩 فك تكييف</option>
+      <option value="maintenance">🧰 صيانة عامة</option>
+      <option value="periodic">📅 صيانة دورية</option>
+      <option value="diagnosis">🔍 تشخيص عطل</option>
+      <option value="piping">🪈 تأسيس مواسير</option>
+      <option value="cleaning">🧼 تنظيف وغسيل</option>
+      <option value="gas">💨 شحن غاز</option>
+    </select>
+  </div>
+  <div class="grid">
+    <div class="field"><label>الماركة</label><input id="svcBrand" placeholder="Carrier / LG"></div>
+    <div class="field"><label>الموديل</label><input id="svcModel" placeholder="42VMC30"></div>
+    <div class="field"><label>القدرة (حصان)</label>
+      <select id="svcHP"><option value="">اختر</option><option>1.5</option><option>2.25</option><option>3</option><option>4</option><option>5</option></select>
+    </div>
+    <div class="field"><label>عدد الوحدات</label><input id="svcUnits" type="number" min="1" value="1"></div>
+  </div>
+  <div class="field"><label>درجة الاستعجال</label>
+    <select id="svcUrgency">
+      <option value="normal">🟢 عادي — 3 أيام</option>
+      <option value="urgent">🟡 مستعجل — 24 ساعة</option>
+      <option value="emergency">🔴 طارئ — نفس اليوم</option>
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px">📍 العنوان</h3>
+  <div class="field"><label>المدينة</label><input id="svcCity" placeholder="القاهرة"></div>
+  <div class="field"><label>الاسم الثلاثي <span class="req">*</span></label><input id="svcName" placeholder="أحمد محمد علي"></div>
+  <div class="field"><label>العنوان بالتفصيل <span class="req">*</span></label><textarea id="svcAddress" placeholder="الشارع، رقم العمارة، الدور"></textarea></div>
+  <div class="field"><label>رقم الموبايل <span class="req">*</span></label><input id="svcPhone" type="tel" placeholder="01xxxxxxxxx"></div>
+</div>
+
+<div class="card" style="border-right:4px solid var(--green)">
+  <h3 style="color:var(--green);margin-bottom:12px">📅 حجز موعد</h3>
+  <div class="grid">
+    <div class="field">
+      <label>يوم الزيارة <span class="req">*</span></label>
+      <input type="date" id="bookingDate" onchange="updateDateDisplay()">
+      <div id="bookingDateDisplay" style="font-size:12px;color:var(--green);font-weight:700;text-align:center;padding:6px;background:#052e2b;border-radius:8px;border:1px solid #065f46;margin-top:6px">📅 اختار يوم</div>
+    </div>
+    <div class="field"><label>الوقت</label>
+      <select id="bookingTime">
+        <option value="09:00-12:00">🌅 صباحًا (9-12)</option>
+        <option value="12:00-15:00">☀️ الظهر (12-3)</option>
+        <option value="15:00-18:00">🌇 بعد الظهر (3-6)</option>
+        <option value="18:00-21:00">🌙 مساءً (6-9)</option>
+      </select>
+    </div>
+  </div>
+  <div class="field"><label>ملاحظات</label><input id="bookingNotes" placeholder="مثال: بعد العصر"></div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px">🔍 تفاصيل المشكلة</h3>
+  <div class="field"><label>وصف المشكلة</label><textarea id="svcProblem" placeholder="مثال: التكييف مش بيبرد"></textarea></div>
+  <div class="field"><label>كود الخطأ (لو ظاهر)</label><input id="svcErrorCode" placeholder="E1 / CH05"></div>
+  <div class="field"><label>ملاحظات إضافية</label><textarea id="svcNotes"></textarea></div>
+</div>
+
+${state.emergency ? `
+<div class="card" style="border:2px solid var(--amber);background:#1a1508">
+  <h3 style="color:#fbbf24;margin:0 0 10px 0">⚖️ إقرار وشروط خدمة الطوارئ</h3>
+  <div style="background:var(--bg2);padding:12px;border-radius:10px;border:1px solid var(--border);font-size:13px;line-height:1.8;max-height:280px;overflow-y:auto">
+    <p><b style="color:#fbbf24">1) رسوم الاستعجال:</b> أوافق طواعيةً على سداد رسوم استعجال إضافية بنسبة <b style="color:var(--red)">50%</b> من قيمة الخدمة مقابل تنفيذ الخدمة خلال 3 ساعات.</p>
+    <p><b style="color:#fbbf24">2) نطاق الخدمة:</b> تشمل التشخيص والإصلاح أو التركيب الفوري. لا تشمل قطع غيار غير متوفرة.</p>
+    <p><b style="color:#fbbf24">3) عدم الوصول في الوقت:</b> يحق للعميل إلغاء الطلب وإعفاؤه كليًا من رسوم الاستعجال.</p>
+    <p><b style="color:#fbbf24">4) الإلغاء بعد الانطلاق:</b> تُحتسب رسوم جزئية 25% لتغطية تكاليف الانتقال.</p>
+    <p><b style="color:#fbbf24">5) ظروف قهرية:</b> تُعفى الشركة في حالات الأمطار الغزيرة أو إغلاق الطرق مع إخطار العميل.</p>
+    <p><b style="color:#fbbf24">6) الضمان:</b> 30 يومًا على العمالة فقط، لا يشمل قطع الغيار.</p>
+    <p style="margin:0"><b style="color:#fbbf24">7) الموافقة:</b> بتحديد المربع أدناه يُعدّ ذلك موافقة إلكترونية معتمدة.</p>
+  </div>
+  <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;cursor:pointer;background:var(--bg2);padding:12px;border-radius:10px;border:1px solid var(--amber)">
+    <input type="checkbox" id="emergencyTerms" style="width:22px;height:22px;margin-top:2px;cursor:pointer;flex-shrink:0">
+    <span style="font-size:13px;line-height:1.6"><b style="color:#fbbf24">أُقرّ بأنني قرأت وفهمت ووافقت على جميع الشروط أعلاه</b></span>
+  </label>
+</div>` : ''}
+
+<button class="btn primary block" style="padding:15px;font-size:16px" onclick="createServiceOrder()">📤 إرسال طلب الخدمة</button>`,
+
+  diagnosis: () => `<h2>🤖 تشخيص الأعطال</h2>
+<div class="card">
+  <h3 style="margin-bottom:10px">🤖 التشخيص بالذكاء الاصطناعي</h3>
+  <p class="muted">اوصف العطل بكلامك، والـ AI هيقولك السبب والحل.</p>
+  <div class="field"><label>وصف العطل <span class="req">*</span></label><textarea id="aiSymptom" placeholder="التكييف شغال بس مش بيبرد"></textarea></div>
+  <div class="field"><label>نوع الجهاز (اختياري)</label><input id="aiDevice" placeholder="Carrier 1.5 HP"></div>
+  <button class="btn primary block" onclick="aiDiagnose()" id="aiBtn">🤖 شخّص بالذكاء الاصطناعي</button>
+  <div id="aiResult"></div>
+</div>
+<div class="card">
+  <h3 style="margin-bottom:10px">📖 قاعدة الأكواد</h3>
+  <div class="grid">
+    <div class="field"><label>الماركة</label>
+      <select id="faultBrand" onchange="renderFaults()">
+        <option value="">كل الماركات</option>
+        ${[...new Set(FAULT_DB.map(x => x[0]))].map(x => `<option>${x}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field"><label>الكود</label><input id="faultCode" placeholder="E3" oninput="renderFaults()"></div>
+  </div>
+  <div id="faultResults"></div>
+</div>`,
+
+  calculators: () => `<h2>🧮 حاسبات HVAC</h2>
+<div class="card" style="border-right:5px solid var(--amber);background:linear-gradient(135deg,#1a1508,#151d2a)">
+  <h3 style="color:#fbbf24;margin:0 0 8px 0">🪈 حاسبة تأسيس المواسير</h3>
+  <p class="muted" style="margin:0 0 14px 0;font-size:13px">اعرف سعر التأسيس قبل ما تكلّم أي فني.</p>
+  <div class="field"><label>قدرة الجهاز (حصان)</label>
+    <select id="pipeHP"><option value="1.5">1.5</option><option value="2.25">2.25</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+  </div>
+  <div class="field"><label>طول المواسير (متر)</label><input id="pipeLength" type="number" min="1" step="0.5" value="3"></div>
+  <div class="field"><label>عدد الوحدات</label><input id="pipeUnits" type="number" min="1" value="1"></div>
+  <div class="field"><label>نوع التركيب</label>
+    <select id="pipeType">
+      <option value="standard">🏠 عادي (ظاهر)</option>
+      <option value="hidden">🔨 مخفي (داخل الحوائط)</option>
+      <option value="decor">🎨 ديكور</option>
+    </select>
+  </div>
+  <button class="btn primary block" onclick="calcPipes()" style="background:var(--amber);color:#111;font-weight:900">🧮 احسب السعر</button>
+  <div id="pipeResult"></div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:12px">📐 تقدير القدرة (BTU)</h3>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="field"><label>الطول (م)</label><input id="calcLength" type="number" min="0" step="0.1" placeholder="4"></div>
+    <div class="field"><label>العرض (م)</label><input id="calcWidth" type="number" min="0" step="0.1" placeholder="3"></div>
+    <div class="field"><label>الارتفاع (م)</label><input id="calcHeight" type="number" min="0" step="0.1" value="2.7"></div>
+  </div>
+  <div class="field"><label>أو اكتب الحجم الكلي (م³)</label><input id="vol" type="number" min="0" placeholder="اختياري"></div>
+  <div class="field"><label>نوع المكان</label>
+    <select id="factor">
+      <option value="300">🏠 عادي (300)</option>
+      <option value="350">🌤️ متوسط (350)</option>
+      <option value="400">☀️ عالي/دور أخير (400)</option>
+      <option value="450">🔥 محل تجاري (450)</option>
+      <option value="500">🍽️ مطعم (500)</option>
+    </select>
+  </div>
+  <button class="btn primary block" onclick="calcCapacity()">احسب</button>
+  <div id="capResult"></div>
+</div>`,
+    orders: () => {
+    if (!state.user) return `<h2>📋 طلباتي</h2>
+      <div class="notice info" style="text-align:center;padding:40px 20px">
+        <div style="font-size:56px;margin-bottom:12px">🔐</div>
+        <p style="margin:0 0 16px 0">سجّل الدخول لعرض طلباتك</p>
+        <button class="btn primary" onclick="openAuth()">تسجيل الدخول</button>
+      </div>`;
+    return `<h2>📋 طلباتي</h2><div id="ordersList"><div class="notice info">جارٍ التحميل...</div></div>`;
+  },
+
+  tech_dashboard: () => {
+    const t = safeRead('current_tech', null);
+    if (t) return pages.tech_panel();
+    return `<h2>👷 لوحة الفني</h2>
+      <div class="card">
+        <div class="field"><label>رقم الموبايل المسجل <span class="req">*</span></label><input id="techPhone" type="tel" placeholder="01xxxxxxxxx"></div>
+        <button class="btn primary block" style="padding:14px" onclick="techLogin()">دخول اللوحة</button>
+      </div>
+      <div class="card" style="text-align:center">
+        <p class="muted" style="margin:0 0 12px 0">مش مسجل في فريق الفنيين؟</p>
+        <button class="btn green" onclick="setPage('tech_join')">👷 انضم للفريق</button>
+      </div>`;
+  },
+
+  tech_panel: () => '<h2>👷 لوحة الفني</h2><div id="techPanelContent"><div class="notice info">جارٍ التحميل...</div></div>',
+
+  tech_join: () => `<h2>👷 انضم لفريق الفنيين</h2>
+<div class="card">
+  <div class="field"><label>الاسم الثلاثي <span class="req">*</span></label><input id="tjName"></div>
+  <div class="field"><label>رقم الموبايل <span class="req">*</span></label><input id="tjPhone" type="tel" placeholder="01xxxxxxxxx"></div>
+  <div class="field"><label>المدينة <span class="req">*</span></label><input id="tjCity" placeholder="الإسكندرية"></div>
+  <div class="field"><label>سنوات الخبرة</label>
+    <select id="tjExp">
+      <option>أقل من سنة</option>
+      <option>1-3 سنوات</option>
+      <option>3-5 سنوات</option>
+      <option>5-10 سنوات</option>
+      <option>أكثر من 10 سنوات</option>
+    </select>
+  </div>
+  <button class="btn primary block" style="padding:14px" onclick="startQuiz()">التالي ➡️</button>
+</div>`,
+
+  admin: () => {
+    if (!isAdmin()) return `<h2>⚙️ لوحة الإدارة</h2>
+      <div class="notice err" style="padding:40px 20px;text-align:center;font-size:15px">
+        <div style="font-size:56px;margin-bottom:12px">🔒</div>
+        غير مصرح — هذه الصفحة للمشرفين فقط<br><br>
+        <button class="btn" onclick="setPage('home')">العودة للرئيسية</button>
+      </div>`;
+
+    const orders = safeRead('orders', []);
+    const apps = safeRead('tech_apps', []);
+    const totalRevenue = orders.filter(o => o.status === 'completed').reduce((s, o) => s + (o.total_amount || 0), 0);
+
+    return `<h2>⚙️ لوحة الإدارة</h2>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+  <div class="stat"><div class="num">${products.length}</div><div class="lbl">منتج</div></div>
+  <div class="stat blue"><div class="num">${orders.length}</div><div class="lbl">طلب</div></div>
+  <div class="stat green"><div class="num">${money(totalRevenue)}</div><div class="lbl">إيرادات</div></div>
+  <div class="stat amber"><div class="num">${apps.filter(a => a.status === 'pending').length}</div><div class="lbl">طلبات فنيين</div></div>
+</div>
+
+<div class="admin-section">
+  <h3 onclick="toggleSection(this)">➕ إضافة منتج</h3>
+  <div class="content">
+    <div class="grid">
+      <div class="field"><label>الاسم</label><input id="npName"></div>
+      <div class="field"><label>الماركة</label><input id="npBrand"></div>
+      <div class="field"><label>السعر</label><input id="npPrice" type="number"></div>
+      <div class="field"><label>الخصم %</label><input id="npDiscount" type="number" value="0" min="0" max="90"></div>
+      <div class="field"><label>المخزون</label><input id="npStock" type="number" value="1"></div>
+      <div class="field"><label>أيقونة</label><input id="npEmoji" placeholder="❄️"></div>
+    </div>
+    <div class="field"><label>رابط صورة (اختياري)</label><input id="npImage" placeholder="https://..."></div>
+    <div class="field"><label>وصف</label><input id="npDesc"></div>
+    <button class="btn green block" onclick="addProduct()">➕ إضافة</button>
+  </div>
+</div>
+
+<div class="admin-section">
+  <h3 onclick="toggleSection(this)">🛍️ المنتجات (${products.length})</h3>
+  <div class="content" id="adminProducts">${renderAdminProducts()}</div>
+</div>
+
+<div class="admin-section">
+  <h3 onclick="toggleSection(this)">📢 الإعلانات (${ads.length})</h3>
+  <div class="content">
+    <div class="grid">
+      <div class="field"><label>العنوان</label><input id="adTitle"></div>
+      <div class="field"><label>المنتج</label>
+        <select id="adProduct"><option value="">— بدون —</option>${products.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="field"><label>الوصف</label><textarea id="adBody" style="min-height:60px"></textarea></div>
+    <div class="grid">
+      <div class="field"><label>أيقونة</label><input id="adEmoji" value="📢" maxlength="4"></div>
+      <div class="field"><label>اللون</label>
+        <select id="adColor"><option value="#ef4444">🔴 أحمر</option><option value="#f59e0b">🟡 أصفر</option><option value="#10b981">🟢 أخضر</option><option value="#3b82f6">🔵 أزرق</option></select>
+      </div>
+    </div>
+    <button class="btn green block" onclick="addAd()">➕ إضافة</button>
+    <div style="margin-top:14px" id="adminAds">${renderAdminAds()}</div>
+  </div>
+</div>
+
+<div class="admin-section">
+  <h3 onclick="toggleSection(this)">🎟️ الكوبونات (${coupons.length})</h3>
+  <div class="content">
+    <div class="grid">
+      <div class="field"><label>كود</label><input id="cpCode" placeholder="SAVE30"></div>
+      <div class="field"><label>الخصم %</label><input id="cpDiscount" type="number" min="1" max="90" value="10"></div>
+      <div class="field"><label>حد أدنى (ج.م)</label><input id="cpMinOrder" type="number" min="0" value="0"></div>
+      <div class="field"><label>حد أقصى للخصم (ج.م)</label><input id="cpMaxDiscount" type="number" min="0" value="0"></div>
+    </div>
+    <button class="btn green block" onclick="addCoupon()">➕ إضافة كوبون</button>
+    <div style="margin-top:14px" id="adminCoupons">${renderAdminCoupons()}</div>
+  </div>
+</div>
+
+<div class="admin-section">
+  <h3 onclick="toggleSection(this)">📋 الطلبات (${orders.length})</h3>
+  <div class="content" id="adminOrders">جارٍ التحميل...</div>
+</div>
+
+<div class="admin-section">
+  <h3 onclick="toggleSection(this)">👷 المتقدمين للفنيين (${apps.length})</h3>
+  <div class="content" id="techAppsList">جارٍ التحميل...</div>
+</div>`;
+  }
+};
+
+/* ============================================================
+   13) ADMIN SECTION TOGGLE
+   ============================================================ */
+function toggleSection(el) {
+  el.parentElement.classList.toggle('collapsed');
+  }
+  /* ============================================================
+   14) PRODUCTS
+   ============================================================ */
+function filterProducts() {
+  const q = (document.getElementById('productSearch')?.value || '').toLowerCase();
+  const min = parseFloat(document.getElementById('priceMin')?.value) || 0;
+  const max = parseFloat(document.getElementById('priceMax')?.value) || 0;
+  let arr = products.filter(p => {
+    const f = getFinalPrice(p);
+    if (min && f < min) return false;
+    if (max && f > max) return false;
+    return (p.name + ' ' + (p.brand || '')).toLowerCase().includes(q);
+  });
+  const sort = document.getElementById('sortSelect')?.value || 'default';
+  if (sort === 'priceLow') arr.sort((a, b) => a.price - b.price);
+  else if (sort === 'priceHigh') arr.sort((a, b) => b.price - a.price);
+  else if (sort === 'nameAz') arr.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+
+  const grid = document.getElementById('productGrid');
+  if (!grid) return;
+  if (!arr.length) {
+    grid.innerHTML = '<div class="notice info" style="grid-column:1/-1;text-align:center">لا توجد نتائج مطابقة</div>';
+    return;
+  }
+  grid.innerHTML = arr.map(p => {
+    const final = getFinalPrice(p);
+    return `<div class="product-card">
+      <div class="img">
+        ${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'">` : ''}
+        ${p.discount > 0 ? `<span class="badge-discount">−${p.discount}%</span>` : ''}
+      </div>
+      <div class="body">
+        <span class="pill">${esc(p.brand || '')}</span>
+        <div class="name">${esc(p.emoji || '📦')} ${esc(p.name)}</div>
+        <div class="price">${money(final)}${p.discount > 0 ? ` <span style="font-size:13px;color:#f87171;text-decoration:line-through">${money(p.price)}</span>` : ''}</div>
+        <div class="muted-sm">متاح: ${p.stock}</div>
+        <div class="actions">
+          <button class="btn primary" ${p.stock < 1 ? 'disabled' : ''} onclick="addCart('${p.id}')">🛒 أضف</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdminProducts() {
+  if (!products.length) return '<div class="muted">لا توجد منتجات</div>';
+  return products.map((p, i) => {
+    const final = getFinalPrice(p);
+    return `<div style="display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);padding:10px 0;align-items:center">
+      <div style="flex:1;min-width:0">
+        <b>${p.emoji || '📦'} ${esc(p.name)}</b>
+        <div class="muted-sm">${esc(p.brand || '')} — ${money(final)}${p.discount > 0 ? ` <span style="color:#f87171">(−${p.discount}%)</span>` : ''} — مخزون: ${p.stock}</div>
+      </div>
+      <div class="row" style="gap:4px">
+        <button class="btn sm" onclick="editProduct(${i})">✏️</button>
+        <button class="btn sm red" onclick="deleteProduct(${i})">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addProduct() {
+  const name = document.getElementById('npName').value.trim();
+  const brand = document.getElementById('npBrand').value.trim();
+  const price = parseFloat(document.getElementById('npPrice').value);
+  const discount = parseFloat(document.getElementById('npDiscount').value) || 0;
+  const stock = parseInt(document.getElementById('npStock').value) || 0;
+  const emoji = document.getElementById('npEmoji').value.trim() || '📦';
+  const image = document.getElementById('npImage').value.trim();
+  const description = document.getElementById('npDesc').value.trim();
+
+  if (!name || !price || price <= 0) {
+    Toast.err('اكتب الاسم والسعر');
+    return;
+  }
+  products.push({
+    id: uid('p'), name, brand, price, stock, emoji, image, description,
+    discount: Math.min(90, Math.max(0, discount))
+  });
+  saveProducts();
+  Toast.ok('تم إضافة المنتج');
+  render();
+}
+
+async function editProduct(i) {
+  const p = products[i];
+  const newName = await InputPrompt.ask('اسم المنتج', p.name, 'تعديل المنتج');
+  if (!newName) return;
+  const newPriceStr = await InputPrompt.ask('السعر', String(p.price), 'تعديل السعر', 'number');
+  if (!newPriceStr) return;
+  const newStockStr = await InputPrompt.ask('المخزون', String(p.stock), 'تعديل المخزون', 'number');
+  if (newStockStr === null) return;
+
+  p.name = newName;
+  p.price = parseFloat(newPriceStr) || p.price;
+  p.stock = parseInt(newStockStr) || 0;
+  saveProducts();
+  Toast.ok('تم التعديل');
+  render();
+}
+
+async function deleteProduct(i) {
+  const ok = await Confirm.ask(`حذف "${products[i].name}"؟`, 'حذف منتج', 'احذف', 'إلغاء');
+  if (!ok) return;
+  products.splice(i, 1);
+  saveProducts();
+  Toast.info('تم الحذف');
+  render();
+}
+
+/* ============================================================
+   15) ADS
+   ============================================================ */
+function renderAdminAds() {
+  if (!ads.length) return '<div class="muted">لا توجد إعلانات</div>';
+  return ads.map((a, i) => `<div style="display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);padding:10px 0;align-items:center">
+    <div style="flex:1;min-width:0">
+      <b>${a.emoji || '📢'} ${esc(a.title)}</b>
+      <div class="muted-sm">${esc(a.body.slice(0, 60))}${a.body.length > 60 ? '...' : ''}</div>
+      <span class="pill ${a.active ? 'green' : 'amber'}">${a.active ? '✅ نشط' : '⏸️ متوقف'}</span>
+    </div>
+    <div class="row" style="gap:4px">
+      <button class="btn sm" onclick="toggleAd(${i})">${a.active ? '⏸️' : '▶️'}</button>
+      <button class="btn sm red" onclick="deleteAd(${i})">🗑️</button>
+    </div>
+  </div>`).join('');
+}
+
+function addAd() {
+  const title = document.getElementById('adTitle').value.trim();
+  const body = document.getElementById('adBody').value.trim();
+  const productId = document.getElementById('adProduct').value;
+  const emoji = document.getElementById('adEmoji').value.trim() || '📢';
+  const color = document.getElementById('adColor').value;
+  if (!title || !body) { Toast.err('اكتب عنوان ووصف'); return; }
+  ads.push({ id: uid('ad'), title, body, productId, emoji, color, active: true });
+  saveAds();
+  Toast.ok('تم إضافة الإعلان');
+  render();
+}
+
+function toggleAd(i) { ads[i].active = !ads[i].active; saveAds(); render(); }
+
+async function deleteAd(i) {
+  const ok = await Confirm.ask('حذف هذا الإعلان؟', 'حذف', 'احذف', 'إلغاء');
+  if (!ok) return;
+  ads.splice(i, 1);
+  saveAds();
+  render();
+}
+
+/* ============================================================
+   16) CART
+   ============================================================ */
+function addCart(id) {
+  const p = products.find(x => x.id === id);
+  if (!p || p.stock < 1) return;
+  const x = state.cart.find(x => x.id === id);
+  if (x) x.qty++;
+  else state.cart.push({ id: p.id, name: p.name, price: getFinalPrice(p), qty: 1, emoji: p.emoji });
+  saveCart();
+  Toast.ok('تمت الإضافة للسلة');
+  render();
+}
+
+function removeCart(i) {
+  state.cart.splice(i, 1);
+  saveCart();
+  render();
+}
+
+function changeQty(i, delta) {
+  const x = state.cart[i];
+  if (!x) return;
+  x.qty += delta;
+  if (x.qty <= 0) state.cart.splice(i, 1);
+  saveCart();
+  render();
+}
+
+async function clearCart() {
+  const ok = await Confirm.ask('تفريغ السلة بالكامل؟', 'تفريغ', 'نعم', 'إلغاء');
+  if (!ok) return;
+  state.cart = [];
+  state.appliedCoupon = null;
+  saveCart();
+  render();
+}
+
+function removeCoupon() {
+  state.appliedCoupon = null;
+  render();
+}
+
+async function checkoutCart() {
+  if (!state.user) { openAuth(); return; }
+  if (!state.cart.length) return;
+
+  const subtotal = cartTotal();
+  const c = state.appliedCoupon ? coupons.find(x => x.code === state.appliedCoupon && x.active) : null;
+  let discount = 0;
+  if (c) {
+    discount = Math.round(subtotal * c.discount / 100);
+    if (c.maxDiscount && discount * 100 > c.maxDiscount) discount = Math.round(c.maxDiscount / 100);
+  }
+  const finalTotal = subtotal - discount;
+
+  const order = {
+    id: uid('o'),
+    client_id: state.user.id,
+    client_name: (state.profile && state.profile.full_name) || state.user.email,
+    service_type: 'store',
+    details: {
+      items: state.cart,
+      payment_method: 'cod',
+      subtotal,
+      coupon: state.appliedCoupon || null,
+      coupon_discount: discount
+    },
+    total_amount: finalTotal,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+    timeline: [{ status: 'pending', at: new Date().toISOString() }]
+  };
+
+  const orders = safeRead('orders', []);
+  orders.unshift(order);
+  safeWrite('orders', orders);
+
+  if (state.appliedCoupon) markCouponUsed(state.appliedCoupon);
+  notifyWhatsApp(order);
+
+  state.cart = [];
+  state.appliedCoupon = null;
+  saveCart();
+
+  Toast.ok('تم تسجيل طلبك بنجاح');
+  setPage('orders');
+}
+
+/* ============================================================
+   17) SERVICES / ORDERS
+   ============================================================ */
+async function createServiceOrder() {
+  if (!state.user) { openAuth(); return; }
+
+  const details = {
+    name: document.getElementById('svcName').value.trim(),
+    brand: document.getElementById('svcBrand').value.trim(),
+    model: document.getElementById('svcModel').value.trim(),
+    hp: document.getElementById('svcHP').value,
+    units: document.getElementById('svcUnits').value,
+    urgency: document.getElementById('svcUrgency').value,
+    city: document.getElementById('svcCity').value.trim(),
+    address: document.getElementById('svcAddress').value.trim(),
+    phone: document.getElementById('svcPhone').value.trim(),
+    problem: document.getElementById('svcProblem').value.trim(),
+    errorCode: document.getElementById('svcErrorCode').value.trim(),
+    notes: document.getElementById('svcNotes').value.trim(),
+    bookingDate: document.getElementById('bookingDate').value,
+    bookingTime: document.getElementById('bookingTime').value,
+    bookingNotes: document.getElementById('bookingNotes').value.trim()
+  };
+
+  if (!details.phone) { Toast.err('اكتب رقم الموبايل'); return; }
+  if (!/^01[0-9]{9}$/.test(details.phone)) { Toast.err('رقم الموبايل غير صحيح'); return; }
+  if (!details.address) { Toast.err('اكتب العنوان'); return; }
+  if (!details.bookingDate) { Toast.err('اختار يوم الزيارة'); return; }
+
+  const order = {
+    id: uid('o'),
+    client_id: state.user.id,
+    client_name: (state.profile && state.profile.full_name) || state.user.email,
+    service_type: document.getElementById('svcType').value,
+    details,
+    total_amount: 0,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+    timeline: [{ status: 'pending', at: new Date().toISOString() }]
+  };
+
+  if (state.emergency) {
+    const agreed = document.getElementById('emergencyTerms');
+    if (!agreed || !agreed.checked) { Toast.err('يجب الموافقة على شروط الطوارئ'); return; }
+    order.details.emergency = true;
+    order.details.urgencyFee = '50%';
+  }
+
+  const orders = safeRead('orders', []);
+  orders.unshift(order);
+  safeWrite('orders', orders);
+  notifyWhatsApp(order);
+
+  state.emergency = false;
+  Toast.ok('تم إرسال طلبك');
+  setPage('orders');
+}function loadOrders() {
+  const el = document.getElementById('ordersList');
+  if (!el || !state.user) return;
+  const orders = safeRead('orders', []).filter(x => x.client_id === state.user.id);
+  if (!orders.length) {
+    el.innerHTML = `<div class="notice info" style="text-align:center;padding:40px 20px">
+      <div style="font-size:56px;margin-bottom:12px">📭</div>
+      <p style="margin:0">لا توجد طلبات بعد</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = orders.map(orderCard).join('');
+}
+
+function orderCard(o) {
+  try {
+    const d = o.details || {};
+    const map = {
+      installation:'تركيب تكييف', uninstall:'فك تكييف', maintenance:'صيانة عامة',
+      periodic:'صيانة دورية', diagnosis:'تشخيص عطل', piping:'تأسيس مواسير',
+      cleaning:'تنظيف وغسيل', gas:'شحن غاز', store:'طلب متجر'
+    };
+    const icon = o.service_type === 'store' ? '🛒' : '🔧';
+    const typeAr = map[o.service_type] || o.service_type || 'طلب';
+    const statusMeta = {
+      pending:   { color:'#f59e0b', label:'قيد المراجعة' },
+      confirmed: { color:'#3b82f6', label:'مؤكد' },
+      assigned:  { color:'#8b5cf6', label:'تم تعيين فني' },
+      on_way:    { color:'#06b6d4', label:'الفني في الطريق' },
+      arrived:   { color:'#10b981', label:'الفني وصل' },
+      done:      { color:'#10b981', label:'مكتمل' },
+      completed: { color:'#10b981', label:'مكتمل' },
+      cancelled: { color:'#ef4444', label:'ملغي' }
+    };
+    const sm = statusMeta[o.status] || statusMeta.pending;
+    const isStore = o.service_type === 'store';
+
+    const timelineSteps = isStore
+      ? [['pending','تم استلام الطلب'],['confirmed','تم التأكيد'],['assigned','قيد التجهيز'],['done','تم التسليم']]
+      : [['pending','تم استلام الطلب'],['confirmed','تم التأكيد'],['assigned','تعيين فني'],['on_way','في الطريق'],['arrived','وصل الفني'],['done','تم الانتهاء']];
+
+    const orderStepIdx = timelineSteps.findIndex(s => s[0] === o.status);
+    const activeIdx = orderStepIdx >= 0 ? orderStepIdx : (o.status === 'completed' ? timelineSteps.length - 1 : 0);
+
+    return `<div class="card">
+      <div class="row between">
+        <div>
+          <b style="font-size:15px">#${String(o.id).slice(-8)}</b>
+          <div class="muted-sm">${formatDate(o.created_at)}</div>
+        </div>
+        <span class="pill" style="background:${sm.color};color:#fff">${sm.label}</span>
+      </div>
+
+      <div style="margin:10px 0;font-weight:700">${icon} ${typeAr}</div>
+      ${o.total_amount ? `<div class="price">${money(o.total_amount)}</div>` : ''}
+
+      ${d.coupon_discount > 0 ? `<div style="color:var(--green);font-size:12px;margin-top:4px">🎟️ خصم: −${money(d.coupon_discount)} (${esc(d.coupon || '')})</div>` : ''}
+      ${d.bookingDate ? `<div style="color:var(--green);font-size:12px;margin-top:6px">📅 ${formatArabicDate(d.bookingDate)} ${d.bookingTime || ''}</div>` : ''}
+      ${d.address ? `<div class="muted-sm" style="margin-top:4px">📍 ${esc(String(d.address).slice(0, 90))}</div>` : ''}
+      ${d.tech_name ? `<div style="color:var(--purple);font-size:12px;margin-top:4px">👷 الفني: ${esc(d.tech_name)}</div>` : ''}
+      ${d.emergency ? `<div style="color:#f87171;font-size:12px;margin-top:4px">🚨 طوارئ (+50%)</div>` : ''}
+
+      ${o.status !== 'cancelled' ? `
+        <div class="timeline">
+          ${timelineSteps.map((s, i) => `
+            <div class="timeline-step ${i < activeIdx ? 'done' : ''} ${i === activeIdx ? 'active' : ''}">
+              <div class="label">${s[1]}</div>
+            </div>
+          `).join('')}
+        </div>` : `<div class="notice err" style="margin-top:10px">تم إلغاء الطلب</div>`}
+
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" onclick="showInvoice('${o.id}')">🧾 فاتورة</button>
+        ${(o.status === 'done' || o.status === 'completed') && !o.rating ? `<button class="btn sm amber" onclick="openRating('${o.id}')">⭐ قيّم</button>` : ''}
+        ${o.rating ? `<span class="pill green">⭐ ${o.rating}/5</span>` : ''}
+      </div>
+    </div>`;
+  } catch (e) {
+    LOG.err('orderCard error:', e);
+    return '<div class="notice err">خطأ في عرض الطلب</div>';
+  }
+}
+
+/* ============================================================
+   18) CALCULATORS
+   ============================================================ */
+function updateDateDisplay() {
+  const input = document.getElementById('bookingDate');
+  const display = document.getElementById('bookingDateDisplay');
+  if (!input || !display) return;
+  if (!input.value) { display.textContent = '📅 اختار يوم'; return; }
+  const date = new Date(input.value + 'T00:00:00');
+  const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  const isTomorrow = date.toDateString() === tomorrow.toDateString();
+  let prefix = '📅';
+  if (isToday) prefix = '🟢 النهاردة';
+  else if (isTomorrow) prefix = '🟡 بكرة';
+  display.textContent = prefix + ' — ' + days[date.getDay()] + ' ' + date.getDate() + ' ' + months[date.getMonth()];
+}
+
+function calcPipes() {
+  const hp = parseFloat(document.getElementById('pipeHP').value);
+  const len = parseFloat(document.getElementById('pipeLength').value) || 0;
+  const units = parseInt(document.getElementById('pipeUnits').value) || 1;
+  const type = document.getElementById('pipeType').value;
+  const result = document.getElementById('pipeResult');
+  if (len <= 0) { Toast.err('اكتب الطول'); return; }
+  const base = pipePrices.perMeter[hp] || 200;
+  const mult = pipePrices.typeMultiplier[type] || 1;
+  const pipeCost = base * len * mult;
+  const total = (pipeCost + pipePrices.accessories + pipePrices.installPerUnit) * units;
+  let discount = 0;
+  if (units >= 3) discount = pipePrices.discount3PlusUnits / 100;
+  else if (units === 2) discount = pipePrices.discount2Units / 100;
+  const finalTotal = Math.round(total * (1 - discount));
+  const names = { standard:'تركيب عادي', hidden:'تركيب مخفي', decor:'تركيب ديكور' };
+  result.innerHTML = `<div class="notice ok">
+    <b style="color:#fbbf24">💰 التكلفة التقديرية</b><br><br>
+    قدرة: <b>${hp} حصان</b><br>
+    نوع: <b>${names[type]}</b><br>
+    طول: <b>${len} متر</b><br>
+    عدد: <b>${units}</b><br>
+    سعر المتر: <b>${money(base)}</b><br>
+    ${discount > 0 ? `خصم: <b style="color:var(--green)">−${Math.round(discount * 100)}%</b><br>` : ''}
+    <hr style="border-color:var(--border);margin:12px 0">
+    <div style="font-size:18px;text-align:center;color:#fbbf24;font-weight:900">الإجمالي: ${money(finalTotal)}</div>
+    <p class="muted-sm" style="margin-top:8px;text-align:center">⚠️ سعر تقديري</p>
+    <button class="btn primary block" style="margin-top:10px;background:var(--amber);color:#111" onclick="orderPiping(${finalTotal})">🔧 اطلب تأسيس</button>
+  </div>`;
+}
+
+function orderPiping(price) {
+  state.emergency = false;
+  setPage('services');
+  setTimeout(() => {
+    const el = document.getElementById('svcType'); if (el) el.value = 'piping';
+    const n = document.getElementById('svcNotes'); if (n) n.value = 'طلب تأسيس — تقديري: ' + money(price);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 150);
+}
+
+function calcCapacity() {
+  const length = parseFloat(document.getElementById('calcLength')?.value) || 0;
+  const width = parseFloat(document.getElementById('calcWidth')?.value) || 0;
+  const height = parseFloat(document.getElementById('calcHeight')?.value) || 2.7;
+  const manualVol = parseFloat(document.getElementById('vol')?.value) || 0;
+  const result = document.getElementById('capResult');
+  let volume = 0, source = '';
+  if (length > 0 && width > 0) {
+    volume = length * width * height;
+    source = `المساحة: ${length}×${width}×${height} = ${volume.toFixed(1)} م³`;
+  } else if (manualVol > 0) {
+    volume = manualVol;
+    source = `الحجم: ${volume} م³`;
+  } else {
+    Toast.err('ادخل الأبعاد أو الحجم'); return;
+  }
+  const factor = Number(document.getElementById('factor').value);
+  const btu = volume * factor;
+  let hp = '';
+  if (btu <= 15000) hp = '1.5 حصان';
+  else if (btu <= 22500) hp = '2.25 حصان';
+  else if (btu <= 30000) hp = '3 حصان';
+  else if (btu <= 48000) hp = '4 حصان';
+  else if (btu <= 60000) hp = '5 حصان';
+  else hp = 'أكثر من 5 حصان';
+  result.innerHTML = `<div class="notice ok">${source}<br>معامل: <b>${factor}</b><br>الحمل: <b>${Math.round(btu).toLocaleString('ar-EG')} BTU/h</b><br>الاختيار: <b style="color:#67e8f9;font-size:18px">${hp}</b></div>`;
+}
+
+/* ============================================================
+   19) WHATSAPP NOTIFY
+   ============================================================ */
+function notifyWhatsApp(o) {
+  if (!CALLMEBOT_KEY) {
+    LOG.warn('WhatsApp: المفتاح غير مُعد — تخطي الإشعار');
+    return;
+  }
+  try {
+    const d = o.details || {};
+    const types = {
+      installation:'تركيب تكييف', uninstall:'فك تكييف', maintenance:'صيانة عامة',
+      periodic:'صيانة دورية', diagnosis:'تشخيص عطل', piping:'تأسيس مواسير',
+      cleaning:'تنظيف وغسيل', gas:'شحن غاز', store:'🛒 طلب متجر'
+    };
+    let t = '🔔 طلب جديد\n';
+    t += 'النوع: ' + (types[o.service_type] || o.service_type || '') + '\n';
+    t += 'رقم الطلب: #' + String(o.id).slice(-8) + '\n';
+    if (o.client_name) t += 'العميل: ' + o.client_name + '\n';
+    if (d.brand || d.model) t += 'الجهاز: ' + (d.brand || '') + ' ' + (d.model || '') + '\n';
+    if (d.items && d.items.length) {
+      t += 'المنتجات:\n';
+      d.items.forEach(it => t += '  • ' + it.name + ' × ' + it.qty + '\n');
+    }
+    if (o.total_amount) t += 'الإجمالي: ' + o.total_amount + ' ج.م\n';
+    if (d.problem) t += 'المشكلة: ' + d.problem + '\n';
+    if (d.phone) t += '📞 ' + d.phone + '\n';
+    if (d.address) t += '📍 ' + d.address + '\n';
+    if (d.bookingDate) t += '📅 ' + d.bookingDate + ' ' + (d.bookingTime || '') + '\n';
+    if (d.emergency) t += '🚨 طوارئ (+50%)\n';
+
+    fetch('https://api.callmebot.com/whatsapp.php?phone=' + CALLMEBOT_PHONE + '&text=' + encodeURIComponent(t) + '&apikey=' + CALLMEBOT_KEY)
+      .catch(e => LOG.warn('WhatsApp notify failed:', e));
+  } catch (e) {
+    LOG.warn('notifyWhatsApp error:', e);
+  }
+}
+
+/* ============================================================
+   20) AI DIAGNOSIS
+   ============================================================ */
+async function aiDiagnose() {
+  const symptom = (document.getElementById('aiSymptom')?.value || '').trim();
+  const device = (document.getElementById('aiDevice')?.value || '').trim();
+  const result = document.getElementById('aiResult');
+  const btn = document.getElementById('aiBtn');
+
+  if (!symptom) { Toast.err('اكتب وصف العطل'); return; }
+  if (!CONFIG.GEMINI_API_KEY) {
+    result.innerHTML = '<div class="notice warn">⚠️ التشخيص بالذكاء الاصطناعي غير متاح حالياً<br><br>يمكنك استخدام <b>قاعدة الأكواد</b> في الأسفل.</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span> جارٍ التحليل...';
+  result.innerHTML = '<div class="notice info">🔍 جارٍ التحليل...</div>';
+
+  const prompt = `أنت مهندس تكييف محترف. الجهاز: ${device || 'غير محدد'}. الشكوى: ${symptom}. اكتب 3 أسباب محتملة مرتبة، مع الفحص المطلوب والحل لكل سبب. بالعربي المصري المبسط وبنقاط مرتبة.`;
+
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + CONFIG.GEMINI_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error((data && data.error && data.error.message) || 'خطأ في الاتصال');
+    const text = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || 'لم يصل رد.';
+    result.innerHTML = '<div class="notice ok"><b>🤖 التحليل:</b><br><br>' + esc(text).replace(/\n/g, '<br>') + '</div>';
+    LOG.ok('AI diagnosed successfully');
+  } catch (e) {
+    LOG.err('AI error:', e);
+    result.innerHTML = '<div class="notice err">تعذر التحليل: ' + esc(e.message || e) + '</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🤖 شخّص بالذكاء الاصطناعي';
+  }
+}
+
+function renderFaults() {
+  const b = (document.getElementById('faultBrand')?.value || '').toLowerCase();
+  const c = (document.getElementById('faultCode')?.value || '').trim().toLowerCase();
+  const rows = FAULT_DB.filter(x => (!b || x[0].toLowerCase() === b) && (!c || x[1].toLowerCase().includes(c)));
+  const el = document.getElementById('faultResults');
+  if (!el) return;
+  el.innerHTML = rows.map(x =>
+    '<div class="notice"><b>' + esc(x[0]) + ' ' + esc(x[1]) + '</b><br>' + esc(x[2]) + '<br><span class="muted">' + esc(x[3]) + '</span></div>'
+  ).join('') || '<div class="muted">لا توجد نتيجة</div>';
+}
+
+/* ============================================================
+   21) EMERGENCY
+   ============================================================ */
+function goEmergency() {
+  state.emergency = true;
+  setPage('services');
+  setTimeout(() => {
+    const el = document.getElementById('svcUrgency');
+    if (el) { el.value = 'emergency'; el.style.background = '#7f1d1d'; el.style.borderColor = 'var(--red)'; }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 200);
+}
+
+/* ============================================================
+   22) COUPONS
+   ============================================================ */
+function getUsedCoupons() {
+  if (!state.user) return [];
+  return safeRead('used_' + state.user.id, []);
+}
+
+function markCouponUsed(code) {
+  if (!state.user || !code) return;
+  const u = getUsedCoupons();
+  if (!u.includes(code)) { u.push(code); safeWrite('used_' + state.user.id, u); }
+}
+
+async function promptCoupon() {
+  const code = await InputPrompt.ask('اكتب كود الخصم', 'SAVE10', 'كود خصم');
+  if (!code) return;
+  const upper = code.toUpperCase();
+  const found = coupons.find(c => c.code === upper && c.active);
+  if (!found) { Toast.err('كود غير صحيح'); return; }
+  if (getUsedCoupons().includes(upper)) { Toast.err('هذا الكود مستخدم بالفعل'); return; }
+  const total = cartTotal();
+  if (total * 100 < found.minOrder) {
+    Toast.err('الحد الأدنى: ' + (found.minOrder / 100) + ' ج.م');
+    return;
+  }
+  state.appliedCoupon = upper;
+  Toast.ok('تم تطبيق الخصم: ' + found.discount + '%');
+  render();
+}
+
+function renderAdminCoupons() {
+  if (!coupons.length) return '<div class="muted">لا توجد كوبونات</div>';
+  return coupons.map((c, i) => `<div style="display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);padding:10px 0;align-items:center">
+    <div style="flex:1;min-width:0">
+      <b>${esc(c.code)}</b>
+      <div class="muted-sm">خصم ${c.discount}% — حد أدنى: ${(c.minOrder / 100)} ج.م</div>
+      <span class="pill ${c.active ? 'green' : 'amber'}">${c.active ? '✅ نشط' : '⏸️ متوقف'}</span>
+    </div>
+    <div class="row" style="gap:4px">
+      <button class="btn sm" onclick="toggleCoupon(${i})">${c.active ? '⏸️' : '▶️'}</button>
+      <button class="btn sm red" onclick="deleteCoupon(${i})">🗑️</button>
+    </div>
+  </div>`).join('');
+}
+
+function addCoupon() {
+  const code = document.getElementById('cpCode').value.trim().toUpperCase();
+  const discount = parseFloat(document.getElementById('cpDiscount').value) || 0;
+  const minOrder = parseFloat(document.getElementById('cpMinOrder').value) || 0;
+  const maxDisc = parseFloat(document.getElementById('cpMaxDiscount').value) || 0;
+  if (!code || discount <= 0 || discount > 90) { Toast.err('اكتب كود وخصم صحيح (1-90)'); return; }
+  if (coupons.some(c => c.code === code)) { Toast.err('الكود موجود بالفعل'); return; }
+  coupons.push({ code, discount, minOrder: minOrder * 100, maxDiscount: maxDisc * 100, active: true });
+  saveCoupons();
+  Toast.ok('تم إضافة الكوبون');
+  render();
+}
+
+function toggleCoupon(i) { coupons[i].active = !coupons[i].active; saveCoupons(); render(); }
+
+async function deleteCoupon(i) {
+  const ok = await Confirm.ask('حذف الكوبون "' + coupons[i].code + '"?', 'حذف', 'احذف', 'إلغاء');
+  if (!ok) return;
+  coupons.splice(i, 1);
+  saveCoupons();
+  render();
+  }
+  /* ============================================================
+   23) ADMIN ORDERS
+   ============================================================ */
+async function loadAdmin() {
+  const el = document.getElementById('adminOrders');
+  if (!el) return;
+  const orders = safeRead('orders', []);
+  if (!orders.length) {
+    el.innerHTML = '<div class="muted">لا توجد طلبات</div>';
+    return;
+  }
+  el.innerHTML = orders.map((o, i) => {
+    const d = o.details || {};
+    const name = (d.brand || '') + ' ' + (d.model || '');
+    return `<div style="border-bottom:1px solid var(--border);padding:12px 0">
+      <div class="row between">
+        <b>#${String(o.id).slice(-8)}</b>
+        <span class="pill">${esc(o.status || 'pending')}</span>
+      </div>
+      <div class="muted-sm" style="margin:4px 0">${esc(o.service_type || '')}</div>
+      ${o.client_name ? `<div class="muted-sm">👤 ${esc(o.client_name)}</div>` : ''}
+      ${name.trim() ? `<div class="muted-sm">🔧 ${esc(name)}</div>` : ''}
+      ${d.phone ? `<div class="muted-sm">📞 ${esc(d.phone)}</div>` : ''}
+      ${d.address ? `<div class="muted-sm">📍 ${esc(d.address)}</div>` : ''}
+      ${d.bookingDate ? `<div style="color:var(--green);font-size:12px">📅 ${d.bookingDate} ${d.bookingTime || ''}</div>` : ''}
+      ${o.total_amount ? `<div style="color:#67e8f9;font-size:12px">💰 ${money(o.total_amount)}</div>` : ''}
+      ${d.emergency ? `<div style="color:#f87171;font-size:12px">🚨 طوارئ</div>` : ''}
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" onclick="setOrderStatus(${i},'confirmed')">✅ تأكيد</button>
+        <button class="btn sm" onclick="setOrderStatus(${i},'completed')">✔️ إتمام</button>
+        <button class="btn sm red" onclick="setOrderStatus(${i},'cancelled')">❌ إلغاء</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setOrderStatus(i, status) {
+  const orders = safeRead('orders', []);
+  if (!orders[i]) return;
+  orders[i].status = status;
+  if (!orders[i].timeline) orders[i].timeline = [];
+  orders[i].timeline.push({ status, at: new Date().toISOString() });
+  safeWrite('orders', orders);
+  render();
+}
+
+/* ============================================================
+   24) TECH PANEL
+   ============================================================ */
+function techLogin() {
+  const p = document.getElementById('techPhone');
+  if (!p || !p.value.trim()) { Toast.err('اكتب رقم الموبايل'); return; }
+  const apps = safeRead('tech_apps', []);
+  const found = apps.find(a => a.phone === p.value.trim() && a.status === 'approved');
+  if (!found) { Toast.err('رقمك غير مسجل أو لسه مش معتمد'); return; }
+  safeWrite('current_tech', { phone: found.phone, name: found.name });
+  Toast.ok('أهلاً ' + found.name);
+  render();
+}
+
+function loadTechPanel() {
+  const t = safeRead('current_tech', null);
+  const el = document.getElementById('techPanelContent');
+  if (!el) return;
+  if (!t) {
+    el.innerHTML = '<div class="notice err">مش مسجل دخول</div>';
+    return;
+  }
+  const orders = safeRead('orders', []);
+  const mine = orders.filter(x => x.tech_phone === t.phone);
+  const avail = orders.filter(x => !x.tech_phone && x.status === 'pending');
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="row between">
+        <h3>👋 أهلاً ${esc(t.name)}</h3>
+        <button class="btn sm red" onclick="techLogout()">خروج</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:10px">🔨 طلباتي النشطة (${mine.length})</h3>
+      ${mine.length ? mine.map(ord => `<div style="border-bottom:1px solid var(--border);padding:10px 0">
+        <div class="row between">
+          <b>#${String(ord.id).slice(-8)}</b>
+          <span class="pill">${esc(ord.status || '')}</span>
+        </div>
+        <div class="muted-sm">${esc(ord.details?.city || '')} — ${esc(ord.details?.phone || '')}</div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn sm" onclick="updateTechOrder('${ord.id}','on_way')">🚗 في الطريق</button>
+          <button class="btn sm" onclick="updateTechOrder('${ord.id}','arrived')">📍 وصلت</button>
+          <button class="btn sm green" onclick="updateTechOrder('${ord.id}','done')">✅ تم</button>
+        </div>
+      </div>`).join('') : '<div class="muted">لا توجد طلبات نشطة</div>'}
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:10px">📋 الطلبات المتاحة (${avail.length})</h3>
+      ${avail.length ? avail.map(ord => `<div style="border-bottom:1px solid var(--border);padding:10px 0">
+        <div><b>#${String(ord.id).slice(-8)}</b></div>
+        <div class="muted-sm">📍 ${esc(ord.details?.city || '')}</div>
+        <div class="muted-sm">🔧 ${esc(ord.service_type || '')}</div>
+        <button class="btn sm green" style="margin-top:6px" onclick="takeTechOrder('${ord.id}')">📥 استلام</button>
+      </div>`).join('') : '<div class="muted">لا توجد طلبات متاحة حالياً</div>'}
+    </div>
+  `;
+}
+
+function techLogout() {
+  safeRemove('current_tech');
+  Toast.info('تم تسجيل الخروج');
+  setPage('home');
+}
+
+function updateTechOrder(id, st) {
+  const orders = safeRead('orders', []);
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  o.status = st;
+  safeWrite('orders', orders);
+  Toast.ok('تم التحديث');
+  loadTechPanel();
+}
+
+function takeTechOrder(id) {
+  const t = safeRead('current_tech', null);
+  if (!t) return;
+  const orders = safeRead('orders', []);
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  o.tech_phone = t.phone;
+  o.tech_name = t.name;
+  o.status = 'assigned';
+  safeWrite('orders', orders);
+  Toast.ok('تم استلام الطلب');
+  loadTechPanel();
+}
+
+/* ============================================================
+   25) TECH JOIN — QUIZ
+   ============================================================ */
+const TECH_QUIZ = [
+  { q: 'غاز التبريد الأكثر استخدامًا في التكييفات الحديثة؟', o: ['R22','R410A','R12','R502'], a: 1 },
+  { q: 'تكييف شغال بس مش بيبرد — أشهر سبب؟', o: ['نقص غاز','عطل ريموت','مشكلة كهرباء','الفلاتر نظيفة'], a: 0 },
+  { q: 'كود E1 في Carrier معناه؟', o: ['عطل ضاغط','حساس حرارة الغرفة','نقص غاز','عطل مروحة'], a: 1 },
+  { q: 'أفضل مكان للوحدة الخارجية؟', o: ['شمس مباشرة','ظل مع تهوية','غرفة مغلقة','سطح بدون تهوية'], a: 1 },
+  { q: 'أنسب قدرة لغرفة 20م²؟', o: ['1 حصان','1.5 حصان','2.25 حصان','3 حصان'], a: 1 }
+];
+
+function startQuiz() {
+  const n = document.getElementById('tjName');
+  const p = document.getElementById('tjPhone');
+  const c = document.getElementById('tjCity');
+  if (!n || !n.value.trim()) { Toast.err('اكتب الاسم'); return; }
+  if (!p || !p.value.trim()) { Toast.err('اكتب الموبايل'); return; }
+  if (!c || !c.value.trim()) { Toast.err('اكتب المدينة'); return; }
+  window.tempTechData = {
+    name: n.value.trim(), phone: p.value.trim(), city: c.value.trim(),
+    exp: document.getElementById('tjExp').value
+  };
+  showQuiz();
+}
+
+function showQuiz() {
+  let h = '<h2>📝 الاختبار الإلكتروني</h2>';
+  TECH_QUIZ.forEach((q, i) => {
+    h += `<div class="card"><b>${i + 1}. ${q.q}</b><br>`;
+    q.o.forEach((opt, j) => {
+      h += `<label style="display:block;padding:8px;cursor:pointer"><input type="radio" name="q${i}" value="${j}"> ${opt}</label>`;
+    });
+    h += '</div>';
+  });
+  h += '<button class="btn primary block" style="padding:14px" onclick="finishQuiz()">إرسال الاختبار</button>';
+  document.getElementById('app').innerHTML = h;
+}
+
+function finishQuiz() {
+  const d = window.tempTechData || {};
+  let s = 0;
+  TECH_QUIZ.forEach((q, i) => {
+    const sel = document.querySelector(`input[name="q${i}"]:checked`);
+    if (sel && parseInt(sel.value) === q.a) s++;
+  });
+  const pct = Math.round(s / TECH_QUIZ.length * 100);
+  const pass = pct >= 70;
+
+  const apps = safeRead('tech_apps', []);
+  apps.unshift({
+    id: uid('t'),
+    name: d.name || '', phone: d.phone || '', city: d.city || '', exp: d.exp || '',
+    score: s, total: TECH_QUIZ.length, percent: pct,
+    date: new Date().toISOString(), status: 'pending'
+  });
+  safeWrite('tech_apps', apps);
+
+  const h = `<h2>📊 نتيجتك</h2>
+    <div class="card" style="text-align:center;padding:30px">
+      <div style="font-size:60px">${pass ? '🎉' : '😔'}</div>
+      <h3 style="color:${pass ? 'var(--green)' : 'var(--red)'}">${pass ? 'مبروك، نجحت!' : 'للأسف، مش نجحت'}</h3>
+      <div style="font-size:36px;font-weight:900;margin:15px 0;color:${pass ? 'var(--green)' : 'var(--red)'}">${pct}%</div>
+      <p class="muted">إجابات صحيحة: ${s} من ${TECH_QUIZ.length}</p>
+      <p class="muted">النسبة المطلوبة: 70%</p>
+      <button class="btn primary" onclick="setPage('home')" style="margin-top:15px">العودة للرئيسية</button>
+    </div>`;
+  document.getElementById('app').innerHTML = h;
+}
+
+/* ============================================================
+   26) TECH APPS (ADMIN)
+   ============================================================ */
+function loadTechApps() {
+  const el = document.getElementById('techAppsList');
+  if (!el) return;
+  const apps = safeRead('tech_apps', []);
+  if (!apps.length) { el.innerHTML = '<div class="muted">لا يوجد متقدمين بعد</div>'; return; }
+  el.innerHTML = apps.map((a, i) => {
+    const st = a.status || 'pending';
+    const col = st === 'approved' ? 'var(--green)' : st === 'rejected' ? 'var(--red)' : 'var(--amber)';
+    return `<div style="border-bottom:1px solid var(--border);padding:10px 0">
+      <div class="row between">
+        <b>${esc(a.name)}</b>
+        <span class="pill" style="background:${col};color:#fff">${a.percent}%</span>
+      </div>
+      <div class="muted-sm">📞 ${esc(a.phone)}</div>
+      <div class="muted-sm">📍 ${esc(a.city)}</div>
+      <div class="muted-sm">💼 ${esc(a.exp || '')}</div>
+      <div class="row" style="margin-top:6px">
+        <button class="btn sm green" onclick="setTechStatus(${i},'approved')">✅ قبول</button>
+        <button class="btn sm red" onclick="setTechStatus(${i},'rejected')">❌ رفض</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setTechStatus(i, s) {
+  const apps = safeRead('tech_apps', []);
+  if (!apps[i]) return;
+  apps[i].status = s;
+  safeWrite('tech_apps', apps);
+  Toast.ok(s === 'approved' ? 'تم القبول' : 'تم الرفض');
+  loadTechApps();
+}
+
+/* ============================================================
+   27) INVOICE
+   ============================================================ */
+function showInvoice(orderId) {
+  const orders = safeRead('orders', []);
+  const o = orders.find(x => x.id === orderId);
+  if (!o) { Toast.err('الطلب غير موجود'); return; }
+  const d = o.details || {};
+  const items = d.items || [];
+  const subtotal = d.subtotal || o.total_amount || 0;
+  const discount = d.coupon_discount || 0;
+
+  document.getElementById('invoiceContent').innerHTML = `
+    <div style="text-align:center;padding:12px;border-bottom:2px solid var(--border);margin-bottom:14px">
+      <h2 style="justify-content:center;margin:0">❄️ أمازون كول</h2>
+      <div class="muted-sm">فاتورة إلكترونية</div>
+    </div>
+    <div class="row between" style="margin-bottom:8px">
+      <span class="muted">رقم الفاتورة:</span>
+      <b>#${String(o.id).slice(-8)}</b>
+    </div>
+    <div class="row between" style="margin-bottom:8px">
+      <span class="muted">التاريخ:</span>
+      <b>${formatDate(o.created_at)}</b>
+    </div>
+    <div class="row between" style="margin-bottom:14px">
+      <span class="muted">العميل:</span>
+      <b>${esc(o.client_name || '')}</b>
+    </div>
+
+    ${items.length ? `
+      <table style="width:100%;border-collapse:collapse;margin:14px 0">
+        <thead><tr style="background:var(--bg2)"><th style="padding:8px;text-align:right;border-bottom:1px solid var(--border)">المنتج</th><th style="padding:8px;border-bottom:1px solid var(--border)">الكمية</th><th style="padding:8px;border-bottom:1px solid var(--border)">السعر</th></tr></thead>
+        <tbody>
+          ${items.map(it => `<tr><td style="padding:8px;border-bottom:1px solid var(--border)">${esc(it.name)}</td><td style="padding:8px;border-bottom:1px solid var(--border);text-align:center">${it.qty}</td><td style="padding:8px;border-bottom:1px solid var(--border)">${money(it.price * it.qty)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    ` : `<div class="notice"><b>${esc(o.service_type)}</b>${d.problem ? '<br>' + esc(d.problem) : ''}</div>`}
+
+    <div style="border-top:2px solid var(--border);padding-top:12px">
+      ${subtotal ? `<div class="row between"><span class="muted">المجموع:</span><b>${money(subtotal)}</b></div>` : ''}
+      ${discount ? `<div class="row between" style="color:var(--green)"><span>خصم (${esc(d.coupon || '')}):</span><b>−${money(discount)}</b></div>` : ''}
+      <div class="row between" style="margin-top:8px;font-size:20px"><span>الإجمالي:</span><b style="color:#67e8f9">${money(o.total_amount)}</b></div>
+    </div>
+    <div style="text-align:center;margin-top:20px;padding-top:14px;border-top:1px dashed var(--border)">
+      <div class="muted-sm">شكراً لتعاملكم معنا — أمازون كول</div>
+    </div>
+  `;
+  document.getElementById('invoiceModal').classList.add('open');
+}
+
+function closeInvoice() {
+  document.getElementById('invoiceModal').classList.remove('open');
+}
+
+function printInvoice() {
+  const el = document.getElementById('invoiceContent');
+  if (typeof html2pdf === 'undefined') { window.print(); return; }
+  html2pdf().from(el).set({
+    margin: 10,
+    filename: 'invoice-' + Date.now() + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).save();
+  Toast.ok('تم تحميل الفاتورة PDF');
+}
+
+/* ============================================================
+   28) RATING
+   ============================================================ */
+function openRating(orderId) {
+  state.ratingOrderId = orderId;
+  state.ratingValue = 0;
+  const el = document.getElementById('ratingStars');
+  el.innerHTML = [1, 2, 3, 4, 5].map(i => `<span data-i="${i}" onclick="setRating(${i})" style="transition:transform .15s">☆</span>`).join('');
+  document.getElementById('ratingComment').value = '';
+  document.getElementById('ratingModal').classList.add('open');
+}
+
+function setRating(v) {
+  state.ratingValue = v;
+  const el = document.getElementById('ratingStars');
+  el.querySelectorAll('span').forEach((s, i) => {
+    s.textContent = i < v ? '⭐' : '☆';
+    s.style.transform = i < v ? 'scale(1.15)' : 'scale(1)';
+  });
+}
+
+function submitRating() {
+  if (!state.ratingValue) { Toast.err('اختار تقييم'); return; }
+  const orders = safeRead('orders', []);
+  const o = orders.find(x => x.id === state.ratingOrderId);
+  if (!o) return;
+  o.rating = state.ratingValue;
+  o.rating_comment = document.getElementById('ratingComment').value.trim();
+  o.rated_at = new Date().toISOString();
+  safeWrite('orders', orders);
+  document.getElementById('ratingModal').classList.remove('open');
+  Toast.ok('شكراً لتقييمك!');
+  render();
+}
+
+/* ============================================================
+   29) POST-RENDER HOOKS
+   ============================================================ */
+function postRender() {
+  if (state.page === 'store') filterProducts();
+  if (state.page === 'diagnosis') renderFaults();
+  if (state.page === 'orders') loadOrders();
+  if (state.page === 'admin') { loadAdmin(); loadTechApps(); }
+  if (state.page === 'tech_panel') loadTechPanel();
+  if (state.page === 'tech_dashboard') {
+    const t = safeRead('current_tech', null);
+    if (t) loadTechPanel();
+  }
+  if (state.page === 'services') {
+    setTimeout(() => {
+      const d = document.getElementById('bookingDate');
+      if (d && !d.value) {
+        const t = new Date();
+        const yyyy = t.getFullYear();
+        const mm = String(t.getMonth() + 1).padStart(2, '0');
+        const dd = String(t.getDate()).padStart(2, '0');
+        d.value = yyyy + '-' + mm + '-' + dd;
+        d.min = yyyy + '-' + mm + '-' + dd;
+        updateDateDisplay();
+      }
+    }, 50);
+  }
+}
+
+/* ============================================================
+   30) ONLINE/OFFLINE
+   ============================================================ */
+window.addEventListener('online', () => {
+  document.getElementById('offlineBanner').classList.remove('show');
+  Toast.ok('تم استعادة الاتصال');
+});
+window.addEventListener('offline', () => {
+  document.getElementById('offlineBanner').classList.add('show');
+  Toast.warn('لا يوجد اتصال بالإنترنت');
+});
+
+/* ============================================================
+   31) KEYBOARD SHORTCUTS
+   ============================================================ */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeAuth();
+    closeConfirm(false);
+    closeInput(null);
+    closeInvoice();
+    document.getElementById('ratingModal').classList.remove('open');
+  }
+});
+
+/* ============================================================
+   32) INIT
+   ============================================================ */
+function init() {
+  const saved = safeRead('current_user', null);
+  if (saved && !state.user) {
+    state.user = { id: saved.id, email: saved.email, full_name: saved.full_name, phone: saved.phone };
+    state.profile = { full_name: saved.full_name, phone: saved.phone };
+    state.role = saved.role || 'client';
+    LOG.ok('✅ استرجاع جلسة:', saved.email);
+  }
+  if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
+  render();
+  LOG.ok('🎉 التطبيق جاهز');
+}
+
+init();
+</script>
+</body>
+</html>
