@@ -2285,5 +2285,15 @@ function init() {
 
 init();
 </script>
+  <script>
+/* Service Worker Registration */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(reg => console.log('[HVAC] SW registered:', reg.scope))
+      .catch(err => console.warn('[HVAC] SW failed:', err));
+  });
+}
+  </script>
 </body>
 </html>
