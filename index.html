@@ -303,7 +303,83 @@ h3{font-size:16px;font-weight:800}
     </div>
   </div>
 </div>
+<!-- ========== CHECKOUT MODAL ========== -->
+<div class="modal" id="checkoutModal">
+  <div class="modalbox">
+    <div class="modal-head">
+      <h2>📦 بيانات التوصيل</h2>
+      <button class="btn sm" onclick="closeCheckout()">✕</button>
+    </div>
+    <div id="checkoutMsg"></div>
 
+    <div class="field">
+      <label>الاسم الكامل <span class="req">*</span></label>
+      <input id="ckName" placeholder="أحمد محمد">
+    </div>
+
+    <div class="field">
+      <label>رقم الموبايل <span class="req">*</span></label>
+      <input id="ckPhone" type="tel" placeholder="01xxxxxxxxx">
+    </div>
+
+    <div class="field">
+      <label>المحافظة / المدينة <span class="req">*</span></label>
+      <select id="ckCity">
+        <option value="">اختر المحافظة</option>
+        <option>الإسكندرية</option>
+        <option>البحيرة</option>
+        <option>القاهرة</option>
+        <option>الجيزة</option>
+        <option>الدقهلية</option>
+        <option>الغربية</option>
+        <option>المنوفية</option>
+        <option>أخرى</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>طريقة التوصيل <span class="req">*</span></label>
+      <select id="ckDelivery" onchange="toggleAddressField()">
+        <option value="home">🚚 توصيل للعنوان</option>
+        <option value="pickup">🏪 استلام من الفرع</option>
+      </select>
+    </div>
+
+    <div class="field" id="ckAddressField">
+      <label>العنوان بالتفصيل <span class="req">*</span></label>
+      <textarea id="ckAddress" placeholder="الشارع، رقم العمارة، الدور، علامة مميزة"></textarea>
+    </div>
+
+    <div class="field">
+      <label>ملاحظات إضافية (اختياري)</label>
+      <textarea id="ckNotes" placeholder="مثال: بعد العصر، اتصل قبل الوصول" style="min-height:60px"></textarea>
+    </div>
+
+    <div style="background:var(--bg2);border-radius:12px;padding:12px;margin:14px 0">
+      <div class="row between" style="margin-bottom:6px">
+        <span class="muted">عدد المنتجات:</span>
+        <b id="ckItemsCount">0</b>
+      </div>
+      <div class="row between" style="margin-bottom:6px">
+        <span class="muted">المجموع الفرعي:</span>
+        <b id="ckSubtotal">0</b>
+      </div>
+      <div class="row between" id="ckDiscountRow" style="display:none;color:#10b981;margin-bottom:6px">
+        <span>الخصم:</span>
+        <b id="ckDiscount">0</b>
+      </div>
+      <div class="row between" style="border-top:1px solid var(--border);padding-top:8px;font-size:18px">
+        <span>الإجمالي:</span>
+        <b style="color:#67e8f9" id="ckTotal">0</b>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn" onclick="closeCheckout()" style="flex:1">إلغاء</button>
+      <button class="btn primary" onclick="confirmCheckout()" style="flex:2;padding:14px">✅ تأكيد الطلب</button>
+    </div>
+  </div>
+</div>
 <!-- ========== TOASTS ========== -->
 <div class="toast-container" id="toasts"></div>
 
