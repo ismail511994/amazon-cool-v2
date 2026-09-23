@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c4a6e"/>
+      <stop offset="50%" stop-color="#0e7490"/>
+      <stop offset="100%" stop-color="#155e75"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#g)"/>
+  <circle cx="256" cy="200" r="80" fill="none" stroke="url(#gold)" stroke-width="8" opacity="0.4"/>
+  <text x="256" y="270" font-size="180" text-anchor="middle" fill="#fff">❄️</text>
+  <text x="256" y="400" font-family="Tajawal, Arial, sans-serif" font-size="52" font-weight="900" text-anchor="middle" fill="url(#gold)">أمازون كول</text>
+  <text x="256" y="450" font-family="Tajawal, Arial, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#cffafe" letter-spacing="2">HVAC PRO</text>
+</svg>
