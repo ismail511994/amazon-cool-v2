@@ -1,0 +1,39 @@
+{
+  "name": "أمازون كول | HVAC Pro",
+  "short_name": "أمازون كول",
+  "description": "صيانة وتركيب وتشخيص وتجارة أجهزة التكييف",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090d16",
+  "theme_color": "#0c4a6e",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "shopping", "utilities"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "المتجر",
+      "short_name": "المتجر",
+      "url": "./index.html#store"
+    },
+    {
+      "name": "طلب فني",
+      "short_name": "خدمات",
+      "url": "./index.html#services"
+    },
+    {
+      "name": "طوارئ",
+      "short_name": "طوارئ",
+      "url": "./index.html#emergency"
+    }
+  ]
+}
