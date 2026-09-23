@@ -1048,7 +1048,7 @@ ${state.user ? '<div class="notice ok">👋 أهلاً ' + esc(state.profile?.fu
     ${state.appliedCoupon ? `<div class="notice ok row between"><span>🎟️ كود مُطبّق: <b>${esc(state.appliedCoupon)}</b></span><button class="btn sm red" onclick="removeCoupon()">إزالة</button></div>` : ''}
     <div class="row" style="margin-top:12px">
       <button class="btn amber" onclick="promptCoupon()">🎟️ كود خصم</button>
-      <button class="btn primary" style="flex:1" onclick="checkoutCart()">✅ تأكيد الطلب</button>
+      <button class="btn primary" style="flex:1" onclick="openCheckout()">✅ تأكيد الطلب</button>
       <button class="btn" onclick="clearCart()">تفريغ</button>
     </div>`;
   },
@@ -1542,36 +1542,6 @@ function removeCoupon() {
   render();
 }
 
-async function checkoutCart() {
-  if (!state.user) { openAuth(); return; }
-  if (!state.cart.length) return;
-
-  const subtotal = cartTotal();
-  const c = state.appliedCoupon ? coupons.find(x => x.code === state.appliedCoupon && x.active) : null;
-  let discount = 0;
-  if (c) {
-    discount = Math.round(subtotal * c.discount / 100);
-    if (c.maxDiscount && discount * 100 > c.maxDiscount) discount = Math.round(c.maxDiscount / 100);
-  }
-  const finalTotal = subtotal - discount;
-
-  const order = {
-    id: uid('o'),
-    client_id: state.user.id,
-    client_name: (state.profile && state.profile.full_name) || state.user.email,
-    service_type: 'store',
-    details: {
-      items: state.cart,
-      payment_method: 'cod',
-      subtotal,
-      coupon: state.appliedCoupon || null,
-      coupon_discount: discount
-    },
-    total_amount: finalTotal,
-    status: 'pending',
-    created_at: new Date().toISOString(),
-    timeline: [{ status: 'pending', at: new Date().toISOString() }]
-  };
 
   async function checkoutCart() {
   if (!state.user) { openAuth(); return; }
@@ -1640,6 +1610,126 @@ async function checkoutCart() {
   Toast.ok('تم تسجيل طلبك بنجاح');
   setPage('orders');
   }
+/* ============================================================
+   CHECKOUT MODAL FUNCTIONS
+   ============================================================ */
+function toggleAddressField() {
+  const delivery = document.getElementById('ckDelivery').value;
+  const addressField = document.getElementById('ckAddressField');
+  if (addressField) {
+    addressField.style.display = delivery === 'pickup' ? 'none' : 'block';
+  }
+}
+
+function openCheckout() {
+  if (!state.user) { openAuth(); return; }
+  if (!state.cart.length) { Toast.err('السلة فارغة'); return; }
+
+  document.getElementById('ckName').value = (state.profile && state.profile.full_name) || '';
+  document.getElementById('ckPhone').value = (state.profile && state.profile.phone) || '';
+  document.getElementById('ckCity').value = '';
+  document.getElementById('ckAddress').value = '';
+  document.getElementById('ckNotes').value = '';
+  document.getElementById('ckDelivery').value = 'home';
+
+  const subtotal = cartTotal();
+  const c = state.appliedCoupon ? coupons.find(x => x.code === state.appliedCoupon && x.active) : null;
+  let discount = 0;
+  if (c) {
+    discount = Math.round(subtotal * c.discount / 100);
+    if (c.maxDiscount && discount * 100 > c.maxDiscount) discount = Math.round(c.maxDiscount / 100);
+  }
+  const final = subtotal - discount;
+
+  document.getElementById('ckItemsCount').textContent = cartCount();
+  document.getElementById('ckSubtotal').textContent = money(subtotal);
+  document.getElementById('ckDiscountRow').style.display = discount > 0 ? 'flex' : 'none';
+  document.getElementById('ckDiscount').textContent = '-' + money(discount);
+  document.getElementById('ckTotal').textContent = money(final);
+
+  toggleAddressField();
+
+  document.getElementById('checkoutMsg').innerHTML = '';
+  document.getElementById('checkoutModal').classList.add('open');
+}
+
+function closeCheckout() {
+  document.getElementById('checkoutModal').classList.remove('open');
+}
+
+async function confirmCheckout() {
+  const name = document.getElementById('ckName').value.trim();
+  const phone = document.getElementById('ckPhone').value.trim();
+  const city = document.getElementById('ckCity').value;
+  const delivery = document.getElementById('ckDelivery').value;
+  const address = document.getElementById('ckAddress').value.trim();
+  const notes = document.getElementById('ckNotes').value.trim();
+  const msg = document.getElementById('checkoutMsg');
+
+  if (!name) { msg.innerHTML = '<div class="notice err">اكتب الاسم</div>'; return; }
+  if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+    msg.innerHTML = '<div class="notice err">رقم موبايل غير صحيح</div>';
+    return;
+  }
+  if (!city) { msg.innerHTML = '<div class="notice err">اختر المدينة</div>'; return; }
+  if (delivery === 'home' && !address) {
+    msg.innerHTML = '<div class="notice err">اكتب العنوان بالتفصيل</div>'; return;
+  }
+
+  const subtotal = cartTotal();
+  const c = state.appliedCoupon ? coupons.find(x => x.code === state.appliedCoupon && x.active) : null;
+  let discount = 0;
+  if (c) {
+    discount = Math.round(subtotal * c.discount / 100);
+    if (c.maxDiscount && discount * 100 > c.maxDiscount) discount = Math.round(c.maxDiscount / 100);
+  }
+  const finalTotal = subtotal - discount;
+
+  const order = {
+    id: uid('o'),
+    client_id: state.user.id,
+    client_name: name,
+    service_type: 'store',
+    details: {
+      items: state.cart,
+      payment_method: 'cod',
+      subtotal,
+      coupon: state.appliedCoupon || null,
+      coupon_discount: discount,
+      delivery: delivery,
+      delivery_label: delivery === 'home' ? 'توصيل للعنوان' : 'استلام من الفرع',
+      city: city,
+      address: address,
+      phone: phone,
+      notes: notes
+    },
+    total_amount: finalTotal,
+    status: 'pending',
+    timeline: [{ status: 'pending', at: new Date().toISOString() }]
+  };
+
+  if (!DEMO && db) {
+    try {
+      const { error } = await db.from('orders').insert({
+        id: order.id,
+        client_id: order.client_id,
+        client_name: order.client_name,
+        service_type: order.service_type,
+        details: order.details,
+        total_amount: order.total_amount,
+        status: order.status,
+        timeline: order.timeline
+      });
+      if (error) throw error;
+      LOG.ok('✅ تم حفظ الطلب في Supabase');
+    } catch (e) {
+      LOG.err('❌ فشل حفظ الطلب:', e);
+    }
+  }
+
+  const orders = safeRead('orders', []);
+  orders.unshift(order);
+  safeWrite('orders', orders);
 
   if (state.appliedCoupon) markCouponUsed(state.appliedCoupon);
   notifyWhatsApp(order);
@@ -1648,10 +1738,10 @@ async function checkoutCart() {
   state.appliedCoupon = null;
   saveCart();
 
-  Toast.ok('تم تسجيل طلبك بنجاح');
+  closeCheckout();
+  Toast.ok('تم تسجيل طلبك بنجاح ✅');
   setPage('orders');
 }
-
 /* ============================================================
    17) SERVICES / ORDERS
    ============================================================ */
