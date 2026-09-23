@@ -1685,7 +1685,11 @@ async function confirmCheckout() {
   const phone = document.getElementById('ckPhone').value.trim();
   const city = document.getElementById('ckCity').value;
   const delivery = document.getElementById('ckDelivery').value;
-  const address = document.getElementById('ckAddress').value.trim();
+  const district = document.getElementById('ckDistrict').value.trim();
+const street = document.getElementById('ckStreet').value.trim();
+const building = document.getElementById('ckBuilding').value.trim();
+const floor = document.getElementById('ckFloor').value.trim();
+const landmark = document.getElementById('ckLandmark').value.trim();
   const notes = document.getElementById('ckNotes').value.trim();
   const msg = document.getElementById('checkoutMsg');
 
@@ -1695,7 +1699,7 @@ async function confirmCheckout() {
     return;
   }
   if (!city) { msg.innerHTML = '<div class="notice err">اختر المدينة</div>'; return; }
-  if (delivery === 'home' && !address) {
+  if (delivery === 'home' && (!district || !street || !building || !landmark)) {
     msg.innerHTML = '<div class="notice err">اكتب العنوان بالتفصيل</div>'; return;
   }
 
@@ -1722,7 +1726,12 @@ async function confirmCheckout() {
       delivery: delivery,
       delivery_label: delivery === 'home' ? 'توصيل للعنوان' : 'استلام من الفرع',
       city: city,
-      address: address,
+      district: district,
+street: street,
+building: building,
+floor: floor,
+landmark: landmark,
+address: city + ', ' + district + ', ' + street + ', ' + building + (floor ? ', دور ' + floor : '') + ', ' + landmark,
       phone: phone,
       notes: notes
     },
