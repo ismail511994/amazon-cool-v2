@@ -1497,9 +1497,73 @@ async function checkoutCart() {
     timeline: [{ status: 'pending', at: new Date().toISOString() }]
   };
 
+  async function checkoutCart() {
+  if (!state.user) { openAuth(); return; }
+  if (!state.cart.length) return;
+
+  const subtotal = cartTotal();
+  const c = state.appliedCoupon ? coupons.find(x => x.code === state.appliedCoupon && x.active) : null;
+  let discount = 0;
+  if (c) {
+    discount = Math.round(subtotal * c.discount / 100);
+    if (c.maxDiscount && discount * 100 > c.maxDiscount) discount = Math.round(c.maxDiscount / 100);
+  }
+  const finalTotal = subtotal - discount;
+
+  const order = {
+    id: uid('o'),
+    client_id: state.user.id,
+    client_name: (state.profile && state.profile.full_name) || state.user.email,
+    service_type: 'store',
+    details: {
+      items: state.cart,
+      payment_method: 'cod',
+      subtotal,
+      coupon: state.appliedCoupon || null,
+      coupon_discount: discount
+    },
+    total_amount: finalTotal,
+    status: 'pending',
+    timeline: [{ status: 'pending', at: new Date().toISOString() }]
+  };
+
+  // Save to Supabase
+  if (!DEMO && db) {
+    try {
+      LOG.info('💾 حفظ الطلب في Supabase...');
+      const { error } = await db.from('orders').insert({
+        id: order.id,
+        client_id: order.client_id,
+        client_name: order.client_name,
+        service_type: order.service_type,
+        details: order.details,
+        total_amount: order.total_amount,
+        status: order.status,
+        timeline: order.timeline
+      });
+      if (error) throw error;
+      LOG.ok('✅ تم حفظ الطلب في Supabase');
+    } catch (e) {
+      L
+      Toast.err('فشل حفظ الطلب — سيتم الحفظ محلياً');
+    }
+  }
+
+  // Also save locally as backup
   const orders = safeRead('orders', []);
   orders.unshift(order);
   safeWrite('orders', orders);
+
+  if (state.appliedCoupon) markCouponUsed(state.appliedCoupon);
+  notifyWhatsApp(order);
+
+  state.cart = [];
+  state.appliedCoupon = null;
+  saveCart();
+
+  Toast.ok('تم تسجيل طلبك بنجاح');
+  setPage('orders');
+  }
 
   if (state.appliedCoupon) markCouponUsed(state.appliedCoupon);
   notifyWhatsApp(order);
