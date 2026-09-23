@@ -1,5 +1,8 @@
-/* أمازون كول — Service Worker v2.0 */
-const CACHE_NAME = 'amazoncool-v2';
+/* ============================================================
+   أمازون كول — Service Worker v3.0
+   Network-first strategy for fresh content always
+   ============================================================ */
+const CACHE_NAME = 'amazoncool-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -7,28 +10,43 @@ const STATIC_ASSETS = [
   './icon.svg'
 ];
 
-/* Install */
+/* Install — Cache everything and activate immediately */
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
-      .catch((err) => console.warn('[SW] install cache failed:', err))
+      .then(() => {
+        console.log('[SW] Assets cached');
+        return self.skipWaiting();
+      })
+      .catch((err) => console.warn('[SW] Install failed:', err))
   );
 });
 
-/* Activate */
+/* Activate — Clean old caches and take control immediately */
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating...');
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(
-        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
-      ))
-      .then(() => self.clients.claim())
+      .then((keys) => {
+        return Promise.all(
+          keys
+            .filter((k) => k !== CACHE_NAME)
+            .map((k) => {
+              console.log('[SW] Deleting old cache:', k);
+              return caches.delete(k);
+            })
+        );
+      })
+      .then(() => {
+        console.log('[SW] Claiming clients');
+        return self.clients.claim();
+      })
   );
 });
 
-/* Fetch */
+/* Fetch — Network-first for HTML, Cache-first for assets */
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
@@ -44,23 +62,42 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((c) => c.put(req, copy));
           return res;
         })
-        .catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
+        .catch(() => {
+          return caches.match(req).then((r) => r || caches.match('./index.html'));
+        })
     );
     return;
   }
 
   event.respondWith(
     caches.match(req).then((cached) => {
-      if (cached) return cached;
+      if (cached) {
+        fetch(req).then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+          }
+        }).catch(() => {});
+        return cached;
+      }
       return fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+        }
         return res;
-      }).catch(() => cached);
+      });
     })
   );
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data === 'CLEAR_CACHE') {
+    caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))));
+  }
 });
+
+console.log('[SW] Service Worker v3.0 loaded');
