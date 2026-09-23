@@ -548,7 +548,7 @@ const state = {
   page: 'home',
   emergency: false,
   authMode: 'login',
-  cart: safeRead('cart', []),
+  cart: [],
   appliedCoupon: null,
   ratingOrderId: null,
   ratingValue: 0
@@ -566,7 +566,24 @@ const saveProducts = () => safeWrite('products', products);
 const saveAds = () => safeWrite('ads', ads);
 const saveCoupons = () => safeWrite('coupons', coupons);
 const savePipePrices = () => safeWrite('pipe_prices', pipePrices);
-const saveCart = () => safeWrite('cart', state.cart);
+/* User-specific cart functions */
+function getCartKey() {
+  if (!state.user || !state.user.id) return 'cart_guest';
+  return 'cart_' + state.user.id;
+}
+
+function loadUserCart() {
+  const key = getCartKey();
+  state.cart = safeRead(key, []);
+  LOG.info('🛒 تحميل سلة:', key, '- عدد:', state.cart.length);
+}
+
+function saveUserCart() {
+  const key = getCartKey();
+  safeWrite(key, state.cart);
+}
+
+const saveCart = () => saveUserCart();
 
 LOG.info('📊 محلي:', products.length, 'منتج،', ads.length, 'إعلان،', coupons.length, 'كوبون');
 
@@ -808,6 +825,7 @@ async function submitAuth(e) {
       state.role = found.role || 'client';
       LOG.ok('✅ تسجيل دخول:', email);
     }
+    loadUserCart();
     saveSession();
     closeAuth();
     Toast.ok('مرحباً بك ' + (state.profile.full_name || email));
@@ -836,6 +854,8 @@ async function submitAuth(e) {
       state.user = result.data.user;
       state.role = 'client';
     }
+    
+    loadUserCart();
     saveSession();
     closeAuth();
     Toast.ok('تم بنجاح');
@@ -879,6 +899,7 @@ async function logout() {
   state.profile = null;
   state.role = DEMO ? 'admin' : 'guest';
   state.appliedCoupon = null;
+  state.cart = [];
   clearSession();
   if (!DEMO && db) await db.auth.signOut();
   Toast.info('تم تسجيل الخروج');
@@ -2585,6 +2606,7 @@ async function init() {
     state.role = saved.role || 'client';
     LOG.ok('✅ استرجاع جلسة:', saved.email);
   }
+    loadUserCart();
   if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
 
   render();
