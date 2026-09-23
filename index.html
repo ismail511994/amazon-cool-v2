@@ -345,10 +345,33 @@ h3{font-size:16px;font-weight:800}
       </select>
     </div>
 
-    <div class="field" id="ckAddressField">
-      <label>العنوان بالتفصيل <span class="req">*</span></label>
-      <textarea id="ckAddress" placeholder="الشارع، رقم العمارة، الدور، علامة مميزة"></textarea>
+<div id="ckAddressField">
+  <div class="field">
+    <label>المدينة / الحي <span class="req">*</span></label>
+    <input id="ckDistrict" placeholder="مثال: العجمي، سيدي بشر">
+  </div>
+
+  <div class="field">
+    <label>الشارع <span class="req">*</span></label>
+    <input id="ckStreet" placeholder="مثال: شارع الإسكندرية">
+  </div>
+
+  <div class="grid" style="grid-template-columns:1fr 1fr">
+    <div class="field">
+      <label>رقم / اسم العمارة <span class="req">*</span></label>
+      <input id="ckBuilding" placeholder="مثال: 15 / عمارة النور">
     </div>
+    <div class="field">
+      <label>الدور</label>
+      <input id="ckFloor" placeholder="مثال: الثالث">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>علامة مميزة <span class="req">*</span></label>
+    <input id="ckLandmark" placeholder="مثال: جنب مسجد النور">
+  </div>
+</div>
 
     <div class="field">
       <label>ملاحظات إضافية (اختياري)</label>
