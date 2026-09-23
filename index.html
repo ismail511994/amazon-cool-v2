@@ -469,7 +469,52 @@ const saveCoupons = () => safeWrite('coupons', coupons);
 const savePipePrices = () => safeWrite('pipe_prices', pipePrices);
 const saveCart = () => safeWrite('cart', state.cart);
 
-LOG.info('📊 تم التحميل:', products.length, 'منتج،', ads.length, 'إعلان،', coupons.length, 'كوبون');
+LOG.info('📊 محلي:', products.length, 'منتج،', ads.length, 'إعلان،', coupons.length, 'كوبون');
+
+/* ============================================================
+   7.1) LOAD FROM SUPABASE
+   ============================================================ */
+async function loadProductsFromSupabase() {
+  if (DEMO || !db) {
+    LOG.warn('⚠️ DEMO mode — skipping Supabase products');
+    return;
+  }
+  try {
+    LOG.info('🔄 جاري تحميل المنتجات من Supabase...');
+    const { data, error } = await db
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      products = data.map(p => ({
+        id: p.id,
+        name: p.name,
+        brand: p.brand || '',
+        price: Number(p.price) || 0,
+        stock: p.stock || 0,
+        emoji: p.emoji || '📦',
+        image: p.image || '',
+        description: p.description || '',
+        discount: p.discount || 0
+      }));
+      saveProducts();
+      LOG.ok('✅ تم تحميل ' + products.length + ' منتج من Supabase');
+    } else {
+      LOG.warn('⚠️ لا توجد منتجات في Supabase — استخدام الافتراضية');
+    }
+  } catch (e) {
+    LOG.err('❌ فشل تحميل المنتجات:', e);
+  }
+}
+
+async function loadAllFromSupabase() {
+  LOG.info('📥 بدء التحميل من Supabase...');
+  await loadProductsFromSupabase();
+  LOG.ok('✅ اكتمل التحميل من Supabase');
+}
 
 /* ============================================================
    8) HELPERS
@@ -2270,7 +2315,7 @@ document.addEventListener('keydown', (e) => {
 /* ============================================================
    32) INIT
    ============================================================ */
-function init() {
+async function init() {
   const saved = safeRead('current_user', null);
   if (saved && !state.user) {
     state.user = { id: saved.id, email: saved.email, full_name: saved.full_name, phone: saved.phone };
@@ -2279,7 +2324,18 @@ function init() {
     LOG.ok('✅ استرجاع جلسة:', saved.email);
   }
   if (!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
+
   render();
+
+  if (!DEMO && db) {
+    try {
+      await loadAllFromSupabase();
+      render();
+    } catch (e) {
+      LOG.err('❌ Init Supabase error:', e);
+    }
+  }
+
   LOG.ok('🎉 التطبيق جاهز');
 }
 
