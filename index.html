@@ -1819,12 +1819,11 @@ function removeCoupon() {
         details: order.details,
         total_amount: order.total_amount,
         status: order.status,
-        timeline: order.timeline
       });
       if (error) throw error;
       LOG.ok('✅ تم حفظ الطلب في Supabase');
     } catch (e) {
-      L
+      LOG.err('فشل حفظ الطلب:', e);
       Toast.err('فشل حفظ الطلب — سيتم الحفظ محلياً');
     }
   }
