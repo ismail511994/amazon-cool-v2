@@ -2,10 +2,8 @@
    أمازون كول — Service Worker v3.0
    Network-first strategy for fresh content always
    ============================================================ */
-const CACHE_NAME = 'amazoncool-v3';
+const CACHE_NAME = 'amazoncool-v4';
 const STATIC_ASSETS = [
-  './',
-  './index.html',
   './manifest.json',
   './icon.svg'
 ];
@@ -54,20 +52,11 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   if (url.origin !== location.origin) return;
 
-  if (req.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
-          return res;
-        })
-        .catch(() => {
-          return caches.match(req).then((r) => r || caches.match('./index.html'));
-        })
-    );
-    return;
-  }
+// HTML: NEVER cache — always fetch fresh
+if (req.headers.get('accept')?.includes('text/html')) {
+  event.respondWith(fetch(req));
+  return;
+}
 
   event.respondWith(
     caches.match(req).then((cached) => {
