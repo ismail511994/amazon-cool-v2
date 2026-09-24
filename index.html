@@ -1482,11 +1482,84 @@ ${state.emergency ? `
 };
 
 /* ============================================================
+   PIPE PRICES ADMIN FUNCTIONS
+   ============================================================ */
+function loadPipePricesToAdmin() {
+  const p = pipePrices;
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  setVal('pp15', p.perMeter[1.5] || 150);
+  setVal('pp225', p.perMeter[2.25] || 180);
+  setVal('pp3', p.perMeter[3] || 200);
+  setVal('pp4', p.perMeter[4] || 250);
+  setVal('pp5', p.perMeter[5] || 300);
+  setVal('ppStandard', p.typeMultiplier.standard || 1);
+  setVal('ppHidden', p.typeMultiplier.hidden || 1.4);
+  setVal('ppDecor', p.typeMultiplier.decor || 1.7);
+  setVal('ppAccessories', p.accessories || 350);
+  setVal('ppInstall', p.installPerUnit || 400);
+  setVal('ppDisc2', p.discount2Units || 5);
+  setVal('ppDisc3', p.discount3PlusUnits || 10);
+  LOG.info('💰 تم تحميل الأسعار في الحقول');
+}
+
+async function savePipePricesFromAdmin() {
+  const getVal = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+  const newPrices = {
+    perMeter: {
+      1.5: getVal('pp15'),
+      2.25: getVal('pp225'),
+      3: getVal('pp3'),
+      4: getVal('pp4'),
+      5: getVal('pp5')
+    },
+    typeMultiplier: {
+      standard: getVal('ppStandard'),
+      hidden: getVal('ppHidden'),
+      decor: getVal('ppDecor')
+    },
+    accessories: getVal('ppAccessories'),
+    installPerUnit: getVal('ppInstall'),
+    discount2Units: getVal('ppDisc2'),
+    discount3PlusUnits: getVal('ppDisc3')
+  };
+  
+  const ok = await savePipePricesToSupabase(newPrices);
+  if (ok) {
+    pipePrices = newPrices;
+    Toast.ok('✅ تم حفظ الأسعار الجديدة');
+    LOG.ok('💰 تم تحديث الأسعار:', pipePrices);
+  } else {
+    Toast.err('❌ فشل حفظ الأسعار');
+  }
+}
+
+async function resetPipePricesFromAdmin() {
+  const ok = await Confirm.ask('استرجاع الأسعار الأصلية؟', 'استرجاع', 'نعم', 'إلغاء');
+  if (!ok) return;
+  
+  const defaults = {
+    perMeter: { 1.5: 150, 2.25: 180, 3: 200, 4: 250, 5: 300 },
+    typeMultiplier: { standard: 1, hidden: 1.4, decor: 1.7 },
+    accessories: 350,
+    installPerUnit: 400,
+    discount2Units: 5,
+    discount3PlusUnits: 10
+  };
+  
+  const saved = await savePipePricesToSupabase(defaults);
+  if (saved) {
+    pipePrices = defaults;
+    loadPipePricesToAdmin();
+    Toast.info('تم استرجاع الأسعار الأصلية');
+  }
+}
+
+/* ============================================================
    13) ADMIN SECTION TOGGLE
    ============================================================ */
 function toggleSection(el) {
   el.parentElement.classList.toggle('collapsed');
-  }
+}
   /* ============================================================
    14) PRODUCTS
    ============================================================ */
