@@ -626,9 +626,65 @@ async function loadProductsFromSupabase() {
   }
 }
 
+async function loadSettingsFromSupabase() {
+  if (DEMO || !db) {
+    LOG.warn('⚠️ DEMO mode — using default settings');
+    return;
+  }
+  try {
+    LOG.info('🔄 جاري تحميل الإعدادات من Supabase...');
+    const { data, error } = await db
+      .from('settings')
+      .select('*')
+      .eq('key', 'pipe_prices')
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    if (data && data.value) {
+      pipePrices = data.value;
+      safeWrite('pipe_prices', pipePrices);
+      LOG.ok('✅ تم تحميل أسعار المواسير من Supabase');
+    } else {
+      LOG.warn('⚠️ لا توجد أسعار في Supabase — استخدام الافتراضية');
+    }
+  } catch (e) {
+    LOG.err('❌ فشل تحميل الإعدادات:', e);
+  }
+}
+
+async function savePipePricesToSupabase(prices) {
+  if (DEMO || !db) {
+    safeWrite('pipe_prices', prices);
+    LOG.warn('⚠️ DEMO mode — saved locally only');
+    return true;
+  }
+  try {
+    LOG.info('💾 حفظ الأسعار في Supabase...');
+    const { error } = await db
+      .from('settings')
+      .upsert({
+        key: 'pipe_prices',
+        value: prices,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
+    safeWrite('pipe_prices', prices);
+    LOG.ok('✅ تم حفظ الأسعار في Supabase');
+    return true;
+  } catch (e) {
+    LOG.err('❌ فشل حفظ الأسعار:', e);
+    return false;
+  }
+}
+
 async function loadAllFromSupabase() {
   LOG.info('📥 بدء التحميل من Supabase...');
-  await loadProductsFromSupabase();
+  await Promise.all([
+    loadProductsFromSupabase(),
+    loadSettingsFromSupabase()
+  ]);
   LOG.ok('✅ اكتمل التحميل من Supabase');
 }
 
