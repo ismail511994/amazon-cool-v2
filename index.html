@@ -2721,7 +2721,11 @@ function postRender() {
   if (state.page === 'store') filterProducts();
   if (state.page === 'diagnosis') renderFaults();
   if (state.page === 'orders') loadOrders();
-  if (state.page === 'admin') { loadAdmin(); loadTechApps(); }
+  if (state.page === 'admin') {
+  loadAdmin();
+  loadTechApps();
+  loadPipePricesToAdmin();
+  }
   if (state.page === 'tech_panel') loadTechPanel();
   if (state.page === 'tech_dashboard') {
     const t = safeRead('current_tech', null);
