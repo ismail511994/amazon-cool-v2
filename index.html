@@ -2396,14 +2396,41 @@ async function deleteCoupon(i) {
 async function loadAdmin() {
   const el = document.getElementById('adminOrders');
   if (!el) return;
-  const orders = safeRead('orders', []);
+  
+  el.innerHTML = '<div class="notice info" style="text-align:center">⏳ جارٍ تحميل الطلبات...</div>';
+
+  let orders = [];
+
+  // Try Supabase first
+  if (!DEMO && db) {
+    try {
+      LOG.info('🔄 جاري تحميل الطلبات من Supabase...');
+      const { data, error } = await db
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      orders = data || [];
+      LOG.ok('✅ تم تحميل ' + orders.length + ' طلب من Supabase');
+    } catch (e) {
+      LOG.err('❌ فشل تحميل الطلبات من Supabase:', e);
+      orders = safeRead('orders', []);
+      LOG.warn('⚠️ استخدام الطلبات المحلية كبديل');
+    }
+  } else {
+    orders = safeRead('orders', []);
+  }
+
   if (!orders.length) {
     el.innerHTML = '<div class="muted">لا توجد طلبات</div>';
     return;
   }
-  el.innerHTML = orders.map((o, i) => {
+
+  el.innerHTML = orders.map((o) => {
     const d = o.details || {};
     const name = (d.brand || '') + ' ' + (d.model || '');
+    const orderId = o.id;
     return `<div style="border-bottom:1px solid var(--border);padding:12px 0">
       <div class="row between">
         <b>#${String(o.id).slice(-8)}</b>
@@ -2418,22 +2445,50 @@ async function loadAdmin() {
       ${o.total_amount ? `<div style="color:#67e8f9;font-size:12px">💰 ${money(o.total_amount)}</div>` : ''}
       ${d.emergency ? `<div style="color:#f87171;font-size:12px">🚨 طوارئ</div>` : ''}
       <div class="row" style="margin-top:8px">
-        <button class="btn sm" onclick="setOrderStatus(${i},'confirmed')">✅ تأكيد</button>
-        <button class="btn sm" onclick="setOrderStatus(${i},'completed')">✔️ إتمام</button>
-        <button class="btn sm red" onclick="setOrderStatus(${i},'cancelled')">❌ إلغاء</button>
+        <button class="btn sm" onclick="setOrderStatus('${orderId}','confirmed')">✅ تأكيد</button>
+        <button class="btn sm" onclick="setOrderStatus('${orderId}','completed')">✔️ إتمام</button>
+        <button class="btn sm red" onclick="setOrderStatus('${orderId}','cancelled')">❌ إلغاء</button>
       </div>
     </div>`;
   }).join('');
 }
 
-function setOrderStatus(i, status) {
+async function setOrderStatus(orderId, status) {
+  LOG.info('🔄 تحديث حالة الطلب:', orderId, '->', status);
+  
+  // Update in Supabase
+  if (!DEMO && db) {
+    try {
+      const { error } = await db
+        .from('orders')
+        .update({ 
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      LOG.ok('✅ تم تحديث الطلب في Supabase');
+      Toast.ok('تم تحديث الحالة');
+    } catch (e) {
+      LOG.err('❌ فشل تحديث الطلب:', e);
+      Toast.err('فشل التحديث');
+      return;
+    }
+  }
+
+  // Also update in localStorage
   const orders = safeRead('orders', []);
-  if (!orders[i]) return;
-  orders[i].status = status;
-  if (!orders[i].timeline) orders[i].timeline = [];
-  orders[i].timeline.push({ status, at: new Date().toISOString() });
-  safeWrite('orders', orders);
-  render();
+  const order = orders.find(o => o.id === orderId);
+  if (order) {
+    order.status = status;
+    if (!order.timeline) order.timeline = [];
+    order.timeline.push({ status, at: new Date().toISOString() });
+    safeWrite('orders', orders);
+  }
+
+  // Reload the admin list
+  loadAdmin();
 }
 
 /* ============================================================
