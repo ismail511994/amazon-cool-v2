@@ -1429,6 +1429,45 @@ ${state.emergency ? `
     <div style="margin-top:14px" id="adminCoupons">${renderAdminCoupons()}</div>
   </div>
 </div>
+<div class="admin-section">
+  <h3 onclick="toggleSection(this)">💰 أسعار المواسير</h3>
+  <div class="content">
+    <p class="muted-sm" style="margin:0 0 12px 0">عدّل الأسعار وسيتم تطبيقها فوراً على الحاسبة</p>
+
+    <h4 style="color:#fbbf24;margin:12px 0 8px 0">💵 سعر المتر (ج.م)</h4>
+    <div class="grid">
+      <div class="field"><label>1.5 حصان</label><input id="pp15" type="number" min="0" step="10"></div>
+      <div class="field"><label>2.25 حصان</label><input id="pp225" type="number" min="0" step="10"></div>
+      <div class="field"><label>3 حصان</label><input id="pp3" type="number" min="0" step="10"></div>
+      <div class="field"><label>4 حصان</label><input id="pp4" type="number" min="0" step="10"></div>
+      <div class="field"><label>5 حصان</label><input id="pp5" type="number" min="0" step="10"></div>
+    </div>
+
+    <h4 style="color:#fbbf24;margin:12px 0 8px 0">🔧 معامل نوع التركيب</h4>
+    <div class="grid">
+      <div class="field"><label>عادي (ظاهر)</label><input id="ppStandard" type="number" min="0.1" step="0.1"></div>
+      <div class="field"><label>مخفي</label><input id="ppHidden" type="number" min="0.1" step="0.1"></div>
+      <div class="field"><label>ديكور</label><input id="ppDecor" type="number" min="0.1" step="0.1"></div>
+    </div>
+
+    <h4 style="color:#fbbf24;margin:12px 0 8px 0">💼 تكاليف إضافية</h4>
+    <div class="grid">
+      <div class="field"><label>الملحقات</label><input id="ppAccessories" type="number" min="0" step="10"></div>
+      <div class="field"><label>تركيب الوحدة</label><input id="ppInstall" type="number" min="0" step="10"></div>
+    </div>
+
+    <h4 style="color:#fbbf24;margin:12px 0 8px 0">🎁 الخصومات</h4>
+    <div class="grid">
+      <div class="field"><label>خصم وحدتين %</label><input id="ppDisc2" type="number" min="0" max="50" step="1"></div>
+      <div class="field"><label>خصم 3+ وحدات %</label><input id="ppDisc3" type="number" min="0" max="50" step="1"></div>
+    </div>
+
+    <div class="row" style="margin-top:14px">
+      <button class="btn green" onclick="savePipePricesFromAdmin()" style="flex:1">💾 حفظ الأسعار</button>
+      <button class="btn" onclick="resetPipePricesFromAdmin()">🔄 استرجاع الأصلي</button>
+    </div>
+  </div>
+</div>
 
 <div class="admin-section">
   <h3 onclick="toggleSection(this)">📋 الطلبات (${orders.length})</h3>
