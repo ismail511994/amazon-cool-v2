@@ -661,13 +661,35 @@ async function savePipePricesToSupabase(prices) {
   }
   try {
     LOG.info('💾 حفظ الأسعار في Supabase...');
-    const { error } = await db
-      .from('settings')
-      .upsert({
-        key: 'pipe_prices',
-        value: prices,
-        updated_at: new Date().toISOString()
-      });
+    // First, try to update existing row
+const { data: existing } = await db
+  .from('settings')
+  .select('key')
+  .eq('key', 'pipe_prices')
+  .maybeSingle();
+
+let error;
+if (existing) {
+  // Update
+  const result = await db
+    .from('settings')
+    .update({
+      value: prices,
+      updated_at: new Date().toISOString()
+    })
+    .eq('key', 'pipe_prices');
+  error = result.error;
+} else {
+  // Insert
+  const result = await db
+    .from('settings')
+    .insert({
+      key: 'pipe_prices',
+      value: prices,
+      updated_at: new Date().toISOString()
+    });
+  error = result.error;
+}
 
     if (error) throw error;
     safeWrite('pipe_prices', prices);
