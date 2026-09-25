@@ -2554,7 +2554,7 @@ function techLogin() {
   render();
 }
 
-function loadTechPanel() {
+async function loadTechPanel() {
   const t = safeRead('current_tech', null);
   const el = document.getElementById('techPanelContent');
   if (!el) return;
@@ -2562,9 +2562,44 @@ function loadTechPanel() {
     el.innerHTML = '<div class="notice err">مش مسجل دخول</div>';
     return;
   }
-  const orders = safeRead('orders', []);
-  const mine = orders.filter(x => x.tech_phone === t.phone);
-  const avail = orders.filter(x => !x.tech_phone && x.status === 'pending');
+
+  // جيب الطلبات من Supabase
+  let orders = safeRead('orders', []);
+  if (!DEMO && db) {
+    try {
+      const { data, error } = await db
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        orders = data;
+        safeWrite('orders', data);
+      }
+    } catch (e) {
+      LOG.err('Tech orders sync:', e);
+    }
+  }
+
+  // ✅ فلترة الطلبات
+  const mine = orders.filter(x => 
+    x.tech_phone === t.phone && 
+    ['assigned', 'on_way', 'arrived'].includes(x.status)
+  );
+
+  const completed = orders.filter(x => 
+    x.tech_phone === t.phone && 
+    ['done', 'completed'].includes(x.status)
+  );
+
+  const cancelled = orders.filter(x => 
+    x.tech_phone === t.phone && 
+    x.status === 'cancelled'
+  );
+
+  const avail = orders.filter(x => 
+    !x.tech_phone && 
+    x.status === 'pending'
+  );
 
   el.innerHTML = `
     <div class="card">
@@ -2572,25 +2607,48 @@ function loadTechPanel() {
         <h3>👋 أهلاً ${esc(t.name)}</h3>
         <button class="btn sm red" onclick="techLogout()">خروج</button>
       </div>
+      <div class="grid" style="margin-top:10px;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div class="stat" style="padding:10px">
+          <div class="num" style="font-size:20px">${mine.length}</div>
+          <div class="lbl" style="font-size:10px">نشطة</div>
+        </div>
+        <div class="stat green" style="padding:10px">
+          <div class="num" style="font-size:20px">${completed.length}</div>
+          <div class="lbl" style="font-size:10px">مكتملة</div>
+        </div>
+        <div class="stat amber" style="padding:10px">
+          <div class="num" style="font-size:20px">${avail.length}</div>
+          <div class="lbl" style="font-size:10px">متاحة</div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="border-right:4px solid var(--purple)">
       <h3 style="margin-bottom:10px">🔨 طلباتي النشطة (${mine.length})</h3>
       ${mine.length ? mine.map(ord => `<div style="border-bottom:1px solid var(--border);padding:10px 0">
         <div class="row between">
           <b>#${String(ord.id).slice(-8)}</b>
-          <span class="pill">${esc(ord.status || '')}</span>
+          <span class="pill" style="background:${
+            ord.status === 'on_way' ? '#06b6d4' :
+            ord.status === 'arrived' ? '#10b981' :
+            '#8b5cf6'
+          };color:#fff">${
+            ord.status === 'assigned' ? 'مُستلم' :
+            ord.status === 'on_way' ? 'في الطريق' :
+            ord.status === 'arrived' ? 'وصل' : ord.status
+          }</span>
         </div>
         <div class="muted-sm">${esc(ord.details?.city || '')} — ${esc(ord.details?.phone || '')}</div>
+        <div class="muted-sm">🔧 ${esc(ord.service_type || '')}</div>
         <div class="row" style="margin-top:8px">
-          <button class="btn sm" onclick="updateTechOrder('${ord.id}','on_way')">🚗 في الطريق</button>
-          <button class="btn sm" onclick="updateTechOrder('${ord.id}','arrived')">📍 وصلت</button>
-          <button class="btn sm green" onclick="updateTechOrder('${ord.id}','done')">✅ تم</button>
+          ${ord.status === 'assigned' ? `<button class="btn sm" onclick="updateTechOrder('${ord.id}','on_way')">🚗 في الطريق</button>` : ''}
+          ${ord.status === 'on_way' ? `<button class="btn sm" onclick="updateTechOrder('${ord.id}','arrived')">📍 وصلت</button>` : ''}
+          ${ord.status === 'arrived' ? `<button class="btn sm green" onclick="updateTechOrder('${ord.id}','done')">✅ تم الإنجاز</button>` : ''}
         </div>
-      </div>`).join('') : '<div class="muted">لا توجد طلبات نشطة</div>'}
+      </div>`).join('') : '<div class="muted">لا توجد طلبات نشطة حالياً</div>'}
     </div>
 
-    <div class="card">
+    <div class="card" style="border-right:4px solid var(--amber)">
       <h3 style="margin-bottom:10px">📋 الطلبات المتاحة (${avail.length})</h3>
       ${avail.length ? avail.map(ord => `<div style="border-bottom:1px solid var(--border);padding:10px 0">
         <div><b>#${String(ord.id).slice(-8)}</b></div>
@@ -2599,6 +2657,29 @@ function loadTechPanel() {
         <button class="btn sm green" style="margin-top:6px" onclick="takeTechOrder('${ord.id}')">📥 استلام</button>
       </div>`).join('') : '<div class="muted">لا توجد طلبات متاحة حالياً</div>'}
     </div>
+
+    <div class="card" style="border-right:4px solid var(--green)">
+      <h3 style="margin-bottom:10px">✅ طلباتي المكتملة (${completed.length})</h3>
+      ${completed.length ? completed.slice(0, 5).map(ord => `<div style="border-bottom:1px solid var(--border);padding:8px 0;font-size:12px">
+        <div class="row between">
+          <b>#${String(ord.id).slice(-8)}</b>
+          <span class="pill green">✅ مكتمل</span>
+        </div>
+        <div class="muted-sm">${esc(ord.details?.city || '')} — ${esc(ord.details?.phone || '')}</div>
+      </div>`).join('') : '<div class="muted">لا توجد طلبات مكتملة بعد</div>'}
+      ${completed.length > 5 ? `<div class="muted-sm" style="text-align:center;margin-top:8px">+ ${completed.length - 5} طلب أقدم</div>` : ''}
+    </div>
+
+    ${cancelled.length ? `
+    <div class="card" style="border-right:4px solid var(--red)">
+      <h3 style="margin-bottom:10px">❌ طلباتي الملغاة (${cancelled.length})</h3>
+      ${cancelled.slice(0, 3).map(ord => `<div style="border-bottom:1px solid var(--border);padding:8px 0;font-size:12px">
+        <div class="row between">
+          <b>#${String(ord.id).slice(-8)}</b>
+          <span class="pill red">❌ ملغي</span>
+        </div>
+      </div>`).join('')}
+    </div>` : ''}
   `;
 }
 
