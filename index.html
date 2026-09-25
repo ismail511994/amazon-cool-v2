@@ -2603,6 +2603,7 @@ function loadTechPanel() {
           <button class="btn sm" onclick="updateTechOrder('${ord.id}','on_way')">🚗 في الطريق</button>
           <button class="btn sm" onclick="updateTechOrder('${ord.id}','arrived')">📍 وصلت</button>
           <button class="btn sm green" onclick="updateTechOrder('${ord.id}','done')">✅ تم</button>
+          <button class="btn sm amber" onclick="openReportModal('${ord.id}')">📝 تقرير</button>
         </div>
       </div>`).join('') : '<div class="muted">لا توجد طلبات نشطة</div>'}
     </div>
