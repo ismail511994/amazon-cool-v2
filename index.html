@@ -2086,7 +2086,24 @@ async function createServiceOrder() {
     order.details.emergency = true;
     order.details.urgencyFee = '50%';
   }
-
+// ✅ حفظ في Supabase
+if (!DEMO && db) {
+  try {
+    await db.from('orders').insert({
+      id: order.id,
+      client_id: order.client_id,
+      client_name: order.client_name,
+      service_type: order.service_type,
+      details: order.details,
+      total_amount: order.total_amount,
+      status: order.status
+    });
+    LOG.ok('✅ تم حفظ طلب الخدمة');
+  } catch (e) {
+    console.warn('⚠️ فشل حفظ طلب الخدمة:', e);
+  }
+}
+  
   const orders = safeRead('orders', []);
   orders.unshift(order);
   safeWrite('orders', orders);
