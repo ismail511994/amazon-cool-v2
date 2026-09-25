@@ -2087,6 +2087,28 @@ async function createServiceOrder() {
     order.details.urgencyFee = '50%';
   }
 
+  // ✅ حفظ في Supabase
+  if (!DEMO && db) {
+    try {
+      LOG.info('💾 حفظ طلب الخدمة في Supabase...');
+      const { error } = await db.from('orders').insert({
+        id: order.id,
+        client_id: order.client_id,
+        client_name: order.client_name,
+        service_type: order.service_type,
+        details: order.details,
+        total_amount: order.total_amount,
+        status: order.status,
+        timeline: order.timeline
+      });
+      if (error) throw error;
+      LOG.ok('✅ تم حفظ طلب الخدمة في Supabase');
+    } catch (e) {
+      LOG.err('❌ فشل حفظ طلب الخدمة:', e);
+      Toast.err('فشل حفظ الطلب — سيتم الحفظ محلياً');
+    }
+  }
+
   const orders = safeRead('orders', []);
   orders.unshift(order);
   safeWrite('orders', orders);
@@ -2095,7 +2117,7 @@ async function createServiceOrder() {
   state.emergency = false;
   Toast.ok('تم إرسال طلبك');
   setPage('orders');
-}function loadOrders() {
+}
   const el = document.getElementById('ordersList');
   if (!el || !state.user) return;
   const orders = safeRead('orders', []).filter(x => x.client_id === state.user.id);
