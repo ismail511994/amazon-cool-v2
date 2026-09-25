@@ -2608,12 +2608,33 @@ function techLogout() {
   setPage('home');
 }
 
-function updateTechOrder(id, st) {
+async function updateTechOrder(id, st) {
+  // تحديث في Supabase
+  if (!DEMO && db) {
+    try {
+      const { error } = await db
+        .from('orders')
+        .update({ status: st, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+      LOG.ok('✅ تم تحديث الطلب في Supabase');
+    } catch (e) {
+      LOG.err('❌ فشل تحديث الطلب:', e);
+      Toast.err('فشل التحديث — جرّب تاني');
+      return;
+    }
+  }
+
+  // تحديث في localStorage احتياطي
   const orders = safeRead('orders', []);
   const o = orders.find(x => x.id === id);
-  if (!o) return;
-  o.status = st;
-  safeWrite('orders', orders);
+  if (o) {
+    o.status = st;
+    if (!o.timeline) o.timeline = [];
+    o.timeline.push({ status: st, at: new Date().toISOString() });
+    safeWrite('orders', orders);
+  }
+
   Toast.ok('تم التحديث');
   loadTechPanel();
 }
