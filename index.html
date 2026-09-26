@@ -5564,5 +5564,246 @@ if ('serviceWorker' in navigator) {
   });
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Tech Management v1.0
+   1) تسجيل دخول الفني من Supabase
+   2) أزرار قبول/رفض/فصل في لوحة الإدارة
+   ========================================================= */
+(function(){
+  'use strict';
+
+  function ready(cb,t){
+    t=t||0;
+    if(typeof db!=='undefined' && db && typeof safeRead==='function'){ cb(); }
+    else if(t<40){ setTimeout(function(){ ready(cb,t+1); },250); }
+  }
+
+  ready(function(){
+    console.log('[HVAC] 👷 Tech Management v1.0 loaded');
+
+    // ============================================
+    // 1) techLogin — يقرأ من Supabase
+    // ============================================
+    window.techLogin = async function(){
+      var p = document.getElementById('techPhone');
+      if (!p || !p.value.trim()) { Toast.err('اكتب رقم الموبايل'); return; }
+      var phone = p.value.trim();
+
+      if (!/^01[0-9]{9}$/.test(phone)) {
+        Toast.err('رقم موبايل غير صحيح');
+        return;
+      }
+
+      Toast.info('⏳ جاري التحقق...');
+
+      try {
+        var res = await db
+          .from('tech_apps')
+          .select('id, name, phone, city, status')
+          .eq('phone', phone)
+          .eq('status', 'approved')
+          .maybeSingle();
+
+        if (res.error) {
+          console.error('[HVAC] techLogin error:', res.error);
+          Toast.err('خطأ في الاتصال');
+          return;
+        }
+
+        if (!res.data) {
+          Toast.err('رقمك غير مسجل أو لسه مش معتمد');
+          console.warn('[HVAC] ما فيش فني برقم:', phone);
+          return;
+        }
+
+        // نجاح
+        safeWrite('current_tech', {
+          phone: res.data.phone,
+          name: res.data.name,
+          city: res.data.city,
+          id: res.data.id
+        });
+
+        Toast.ok('أهلاً ' + res.data.name);
+        render();
+
+      } catch(e) {
+        console.error('[HVAC] techLogin exception:', e);
+        Toast.err('خطأ: ' + e.message);
+      }
+    };
+
+    // ============================================
+    // 2) adminTechPane — عرض + أزرار
+    // ============================================
+    window.adminTechPane = function(){
+      // ابدأ بتحميل البيانات
+      loadTechsForAdmin();
+
+      return '<div class="admin-pro-card">' +
+        '<div class="row between">' +
+          '<h3>👷 إدارة الفنيين</h3>' +
+          '<button class="btn sm" onclick="window.loadTechsForAdmin()">🔄 تحديث</button>' +
+        '</div>' +
+        '<div id="acTechAdminList" style="margin-top:12px">' +
+          '<div class="muted-sm">جارٍ التحميل...</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="admin-pro-card" style="margin-top:12px">' +
+        '<h3>📊 إحصائيات الفنيين</h3>' +
+        '<div id="acTechStats">جارٍ التحميل...</div>' +
+      '</div>';
+    };
+
+    window.loadTechsForAdmin = async function(){
+      var el = document.getElementById('acTechAdminList');
+      var statsEl = document.getElementById('acTechStats');
+      if (!el) return;
+
+      el.innerHTML = '<div class="muted-sm">جارٍ التحميل...</div>';
+
+      try {
+        var res = await db
+          .from('tech_apps')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (res.error) {
+          el.innerHTML = '<div class="notice err">خطأ: ' + res.error.message + '</div>';
+          return;
+        }
+
+        var techs = res.data || [];
+
+        if (!techs.length) {
+          el.innerHTML = '<div class="notice info">لا يوجد فنيين مسجلين.</div>';
+          if (statsEl) statsEl.innerHTML = '';
+          return;
+        }
+
+        // إحصائيات
+        var stats = {
+          total: techs.length,
+          approved: techs.filter(function(t){ return t.status === 'approved'; }).length,
+          pending: techs.filter(function(t){ return t.status === 'pending' || !t.status; }).length,
+          rejected: techs.filter(function(t){ return t.status === 'rejected'; }).length,
+          available: techs.filter(function(t){ return t.availability === 'available' && t.status === 'approved'; }).length
+        };
+
+        if (statsEl) {
+          statsEl.innerHTML =
+            '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">' +
+              '<div class="admin-mini-stat"><b>' + stats.total + '</b><span>الإجمالي</span></div>' +
+              '<div class="admin-mini-stat"><b style="color:#10b981">' + stats.approved + '</b><span>مقبول</span></div>' +
+              '<div class="admin-mini-stat"><b style="color:#f59e0b">' + stats.pending + '</b><span>قيد الانتظار</span></div>' +
+              '<div class="admin-mini-stat"><b style="color:#ef4444">' + stats.rejected + '</b><span>مرفوض</span></div>' +
+            '</div>';
+        }
+
+        // قائمة الفنيين
+        el.innerHTML = techs.map(function(t){
+          var status = t.status || 'pending';
+          var statusColor = status === 'approved' ? '#10b981' :
+                            status === 'rejected' ? '#ef4444' : '#f59e0b';
+          var statusLabel = status === 'approved' ? '✅ مقبول' :
+                            status === 'rejected' ? '❌ مرفوض' : '⏳ قيد الانتظار';
+
+          var availLabel = '';
+          if (status === 'approved') {
+            var av = t.availability || 'available';
+            var avColor = av === 'available' ? '#10b981' : av === 'busy' ? '#f59e0b' : '#64748b';
+            var avText = av === 'available' ? '🟢 متاح' : av === 'busy' ? '🟡 مشغول' : '⚪ غير متصل';
+            availLabel = '<span style="background:' + avColor + ';color:#fff;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:900;margin-right:6px">' + avText + '</span>';
+          }
+
+          var lastSeen = t.last_seen ? new Date(t.last_seen).toLocaleString('ar-EG') : '—';
+          var location = (t.current_lat && t.current_lng)
+            ? t.current_lat.toFixed(4) + ', ' + t.current_lng.toFixed(4)
+            : '—';
+
+          var escapedPhone = String(t.phone || '').replace(/'/g, "\\'");
+
+          return '<div class="admin-service" style="margin-bottom:10px;padding:12px">' +
+            '<div class="row between">' +
+              '<div style="flex:1;min-width:0">' +
+                '<b style="font-size:14px">' + esc(t.name || 'بدون اسم') + '</b> ' +
+                '<span style="background:' + statusColor + ';color:#fff;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:900">' + statusLabel + '</span>' +
+                '<div class="muted-sm" style="margin-top:6px">📞 ' + esc(t.phone || '—') + '</div>' +
+                '<div class="muted-sm">📍 ' + esc(t.city || '—') + '</div>' +
+                '<div class="muted-sm">💼 ' + esc(t.exp || '—') + '</div>' +
+                '<div class="muted-sm">🏆 ' + (t.total_completed || 0) + ' طلب مكتمل</div>' +
+                '<div class="muted-sm" style="margin-top:4px">🗺️ ' + location + '</div>' +
+                '<div class="muted-sm">🕐 ' + lastSeen + '</div>' +
+                (availLabel ? '<div style="margin-top:6px">' + availLabel + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap">' +
+              (status !== 'approved'
+                ? '<button class="btn sm green" onclick="window.acTechAction(\'' + escapedPhone + '\', \'approve\')">✅ قبول</button>'
+                : '<button class="btn sm red" onclick="window.acTechAction(\'' + escapedPhone + '\', \'suspend\')">🚫 فصل</button>') +
+              (status !== 'rejected'
+                ? '<button class="btn sm red" onclick="window.acTechAction(\'' + escapedPhone + '\', \'reject\')">❌ رفض</button>'
+                : '') +
+              (t.phone ? contactButtons(t.phone, 'الفني', t.name) : '') +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+      } catch(e) {
+        console.error('[HVAC] loadTechsForAdmin error:', e);
+        el.innerHTML = '<div class="notice err">خطأ: ' + e.message + '</div>';
+      }
+    };
+
+    // ============================================
+    // 3) إجراءات (قبول/رفض/فصل)
+    // ============================================
+    window.acTechAction = async function(phone, action){
+      var labels = {
+        approve: 'قبول',
+        reject: 'رفض',
+        suspend: 'فصل'
+      };
+      var messages = {
+        approve: 'قبول الفني وتفعيله؟',
+        reject: 'رفض طلب الفني؟',
+        suspend: 'فصل الفني؟ هيقدر يقدم تاني لو أراد.'
+      };
+
+      var ok = await Confirm.ask(messages[action], labels[action], 'نعم', 'إلغاء');
+      if (!ok) return;
+
+      var newStatus = action === 'approve' ? 'approved' :
+                      action === 'reject' ? 'rejected' : 'pending';
+
+      try {
+        var res = await db
+          .from('tech_apps')
+          .update({
+            status: newStatus,
+            availability: action === 'approve' ? 'available' : 'offline'
+          })
+          .eq('phone', phone);
+
+        if (res.error) {
+          console.error('[HVAC] tech action error:', res.error);
+          Toast.err('فشل: ' + res.error.message);
+          return;
+        }
+
+        Toast.ok('تم: ' + labels[action]);
+        loadTechsForAdmin();
+
+      } catch(e) {
+        console.error('[HVAC] tech action exception:', e);
+        Toast.err('خطأ: ' + e.message);
+      }
+    };
+
+    console.log('[HVAC] 🎯 Tech Management ready');
+  });
+})();
+  </script>
 </body>
 </html>
