@@ -6099,5 +6099,302 @@ if ('serviceWorker' in navigator) {
 
 })();
                  </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Full Tech Management v3.0
+   شروط قانونية + بروفايل فني + خريطة + عمولة 15%
+   ========================================================= */
+(function(){
+  'use strict';
+
+  function ready(cb,t){
+    t=t||0;
+    if(typeof db!=='undefined' && db && typeof safeRead==='function'){ cb(); }
+    else if(t<40){ setTimeout(function(){ ready(cb,t+1); },250); }
+  }
+
+  // ============ 1) الشروط القانونية ============
+  window.acRenderTerms = function(){
+    return '<div class="card" style="border:2px solid #f59e0b;background:#1a1508">' +
+      '<h3 style="color:#fbbf24;margin:0 0 12px 0">⚖️ إقرار وشروط خدمة العميل</h3>' +
+      '<div style="background:var(--bg2);padding:14px;border-radius:10px;border:1px solid var(--border);font-size:13px;line-height:1.9;max-height:340px;overflow-y:auto">' +
+        '<p><b style="color:#fbbf24">المادة 1 — طبيعة الخدمة:</b> شركة أمازون كول وسيط تقني يربط العميل بالفني، وغير مسؤولة عن أفعال الفني الفردية خارج نطاق الخدمة المتفق عليها.</p>' +
+        '<p><b style="color:#fbbf24">المادة 2 — حضور العميل:</b> يلتزم العميل بالتواجد شخصيًا أثناء تنفيذ الفني للعمل، وعدم مغادرة المكان قبل انتهاء الخدمة. في حال عدم التواجد، يتحمل العميل كامل المسؤولية عن أي تلف أو فقدان.</p>' +
+        '<p><b style="color:#fbbf24">المادة 3 — مسؤولية المفقودات:</b> لا تتحمل الشركة مسؤولية فقدان أو تلف أي ممتلكات خاصة داخل مكان الخدمة (مال، مجوهرات، أجهزة، وثائق). العميل مسؤول عن حفظ ممتلكاته.</p>' +
+        '<p><b style="color:#fbbf24">المادة 4 — الاتهامات بالسرقة:</b> في حال وجود شكوك أو اتهامات، يتعهد العميل باتباع الإجراءات القانونية الرسمية. الشركة تلتزم بالتعاون الكامل مع التحقيقات.</p>' +
+        '<p><b style="color:#fbbf24">المادة 5 — العمولة والدفع:</b> العميل على علم بأن الشركة تحصل على عمولة 15% من كل فاتورة مقابل الوساطة. الدفع نقدًا للفني مباشرة عند إتمام الخدمة.</p>' +
+        '<p><b style="color:#fbbf24">المادة 6 — الضمان:</b> ضمان على العمالة 30 يومًا. لا يشمل قطع الغيار أو الأعطال الناتجة عن سوء الاستخدام.</p>' +
+        '<p><b style="color:#fbbf24">المادة 7 — الشكاوى:</b> تقدم الشكوى فورًا عبر التطبيق مع رقم الطلب وصور إن أمكن. الرد خلال 48 ساعة.</p>' +
+        '<p><b style="color:#fbbf24">المادة 8 — إيقاف الفني:</b> يحق للشركة إيقاف الفني مؤقتًا لحين التحقيق، وتستمر الخدمة عبر فني آخر.</p>' +
+        '<p style="margin:0"><b style="color:#fbbf24">المادة 9 — الموافقة الإلكترونية:</b> بتحديد المربع أدناه، يقر العميل بأنه قرأ وفهم جميع المواد ويُعد التحديد موافقة إلكترونية ملزمة قانونيًا.</p>' +
+      '</div>' +
+      '<label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;cursor:pointer;background:var(--bg2);padding:12px;border-radius:10px;border:1px solid #f59e0b">' +
+        '<input type="checkbox" id="acClientTerms" style="width:22px;height:22px;margin-top:2px;cursor:pointer;flex-shrink:0">' +
+        '<span style="font-size:13px;line-height:1.6;color:#fbbf24"><b>أُقر بأنني قرأت وفهمت جميع الشروط وأوافق عليها</b></span>' +
+      '</label>' +
+    '</div>';
+  };
+
+  // حقن الإقرار في صفحة الخدمات
+  if (typeof window.pages !== 'undefined' && window.pages.services) {
+    var _origServices = window.pages.services;
+    window.pages.services = function(){
+      var html = _origServices.apply(this, arguments);
+      if (html.indexOf('acClientTerms') === -1) {
+        html = html.replace(
+          /<button class="btn primary block" style="padding:15px;font-size:16px" onclick="createServiceOrder\(\)">/,
+          window.acRenderTerms() + '<button class="btn primary block" style="padding:15px;font-size:16px" onclick="acCreateOrderWithTerms()">'
+        );
+      }
+      return html;
+    };
+  }
+
+  window.acCreateOrderWithTerms = async function(){
+    var agreed = document.getElementById('acClientTerms');
+    if (!agreed || !agreed.checked) {
+      Toast.err('يجب الموافقة على الشروط القانونية أولًا');
+      if (agreed) agreed.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    safeWrite('client_terms_accepted_at', new Date().toISOString());
+    if (typeof createServiceOrder === 'function') await createServiceOrder();
+  };
+
+  // ============ 2) حساب العمولة ============
+  window.acApplyCommission = async function(orderId, total){
+    var totalNum = Number(total) || 0;
+    var companyCut = Math.round(totalNum * 0.15 * 100) / 100;
+    var techCut = totalNum - companyCut;
+    try {
+      var res = await db.from('orders').update({
+        company_commission: companyCut,
+        tech_earnings: techCut
+      }).eq('id', orderId);
+      if (res.error) return false;
+      console.log('[HVAC] 💰 عمولة الشركة:', companyCut, '— ربح الفني:', techCut);
+      return true;
+    } catch(e) { return false; }
+  };
+
+  // ============ 3) صفحة تفاصيل الفني ============
+  window.acOpenTechDetails = async function(phone){
+    var modal = document.createElement('div');
+    modal.id = 'acTechDetailsModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;padding:16px;overflow:auto;display:flex;align-items:flex-start;justify-content:center';
+    modal.innerHTML = '<div id="acTechDetailsContent" style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;max-width:760px;width:100%;margin:auto"><div class="muted">جارٍ التحميل...</div></div>';
+    document.body.appendChild(modal);
+
+    try {
+      var results = await Promise.all([
+        db.from('tech_apps').select('*').eq('phone', phone).maybeSingle(),
+        db.from('orders').select('*').eq('tech_phone', phone).order('created_at', { ascending: false }).limit(50),
+        db.from('tech_deductions').select('*').eq('tech_phone', phone).order('created_at', { ascending: false }),
+        db.from('tech_complaints').select('*').eq('tech_phone', phone).order('created_at', { ascending: false })
+      ]);
+      var t = results[0].data;
+      var orders = results[1].data || [];
+      var deductions = results[2].data || [];
+      var complaints = results[3].data || [];
+
+      if (!t) {
+        document.getElementById('acTechDetailsContent').innerHTML = '<div class="notice err">لم يتم العثور على الفني</div>';
+        return;
+      }
+
+      var totalRevenue = orders.filter(function(o){ return o.status === 'done' || o.status === 'completed'; }).reduce(function(s, o){ return s + Number(o.total_amount || 0); }, 0);
+      var totalCommission = Math.round(totalRevenue * 0.15 * 100) / 100;
+      var totalEarnings = Math.round((totalRevenue - totalCommission) * 100) / 100;
+      var netEarnings = totalEarnings - Number(t.total_deductions || 0);
+      var mapId = 'acTechMap_' + Date.now();
+      var hasLocation = t.current_lat && t.current_lng;
+
+      document.getElementById('acTechDetailsContent').innerHTML =
+        '<div class="row between" style="margin-bottom:16px">' +
+          '<h2 style="margin:0">👷 ' + esc(t.name || 'الفني') + '</h2>' +
+          '<button class="btn sm" onclick="document.getElementById(\'acTechDetailsModal\').remove()">✕ إغلاق</button>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px">' +
+          '<div class="admin-mini-stat"><b style="color:#67e8f9">' + orders.length + '</b><span>الطلبات</span></div>' +
+          '<div class="admin-mini-stat"><b style="color:#10b981">' + (t.total_completed || 0) + '</b><span>مكتملة</span></div>' +
+          '<div class="admin-mini-stat"><b style="color:#fbbf24">' + (t.rating_avg || 0) + '</b><span>التقييم</span></div>' +
+          '<div class="admin-mini-stat"><b style="color:#ef4444">' + (t.complaints_count || 0) + '</b><span>شكاوى</span></div>' +
+        '</div>' +
+        '<div class="card" style="padding:12px">' +
+          '<h3 style="margin:0 0 10px 0">📍 الموقع الحالي</h3>' +
+          (hasLocation
+            ? '<div id="' + mapId + '" style="width:100%;height:220px;border-radius:10px;background:#1f2937"></div>' +
+              '<div class="muted-sm" style="margin-top:6px;text-align:center">' + t.current_lat.toFixed(4) + ', ' + t.current_lng.toFixed(4) + (t.last_seen ? ' — ' + new Date(t.last_seen).toLocaleString('ar-EG') : '') + '</div>'
+            : '<div class="notice info">📍 لم يشارك الفني موقعه بعد</div>') +
+        '</div>' +
+        '<div class="card" style="padding:12px">' +
+          '<h3 style="margin:0 0 10px 0">💰 الحساب المالي</h3>' +
+          '<div style="font-size:13px;line-height:2">' +
+            '<div class="row between"><span>إجمالي الإيرادات:</span><b>' + money(totalRevenue) + '</b></div>' +
+            '<div class="row between" style="color:#67e8f9"><span>عمولة الشركة (15%):</span><b>' + money(totalCommission) + '</b></div>' +
+            '<div class="row between" style="color:#10b981"><span>صافي الفني:</span><b>' + money(totalEarnings) + '</b></div>' +
+            '<div class="row between" style="color:#ef4444"><span>إجمالي الخصومات:</span><b>' + money(t.total_deductions || 0) + '</b></div>' +
+            '<div class="row between" style="border-top:1px solid var(--border);padding-top:8px;font-size:15px"><span>المستحق النهائي:</span><b style="color:#fbbf24">' + money(netEarnings) + '</b></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card" style="padding:12px">' +
+          '<h3 style="margin:0 0 10px 0">🛡️ إجراءات الإدارة</h3>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+            '<button class="btn sm" style="background:#78350f;color:#fef3c7" onclick="acDeduct(\'' + phone + '\')">💰 خصم</button>' +
+            '<button class="btn sm red" onclick="acSuspend(\'' + phone + '\')">🚫 إيقاف</button>' +
+            '<button class="btn sm red" onclick="acBlacklist(\'' + phone + '\')">⛔ حظر</button>' +
+            '<button class="btn sm" onclick="acResume(\'' + phone + '\')">✅ تفعيل</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card" style="padding:12px">' +
+          '<h3 style="margin:0 0 10px 0">📋 آخر الطلبات</h3>' +
+          (orders.length ? orders.slice(0, 10).map(function(o){
+            return '<div style="border-bottom:1px solid var(--border);padding:8px 0;font-size:12px">' +
+              '<div class="row between"><b>#' + String(o.id).slice(-8) + '</b><span class="muted-sm">' + (o.status || '') + '</span></div>' +
+              '<div class="muted-sm">' + esc(o.client_name || '') + ' — ' + esc(o.service_type || '') + '</div>' +
+              (o.total_amount ? '<div style="color:#67e8f9">' + money(o.total_amount) + '</div>' : '') +
+            '</div>';
+          }).join('') : '<div class="muted-sm">لا توجد طلبات</div>') +
+        '</div>' +
+        (deductions.length ? '<div class="card" style="padding:12px"><h3 style="margin:0 0 10px 0">⚠️ الخصومات (' + deductions.length + ')</h3>' +
+          deductions.map(function(d){
+            return '<div style="border-bottom:1px solid var(--border);padding:8px 0;font-size:12px">' +
+              '<div class="row between"><b style="color:#ef4444">' + money(d.amount) + '</b><span class="muted-sm">' + new Date(d.created_at).toLocaleDateString('ar-EG') + '</span></div>' +
+              '<div class="muted-sm">' + esc(d.reason || '') + '</div>' +
+            '</div>';
+          }).join('') + '</div>' : '') +
+        (complaints.length ? '<div class="card" style="padding:12px"><h3 style="margin:0 0 10px 0">📢 الشكاوى (' + complaints.length + ')</h3>' +
+          complaints.map(function(c){
+            return '<div style="border-bottom:1px solid var(--border);padding:8px 0;font-size:12px">' +
+              '<div class="row between"><b>' + esc(c.complaint_type || 'شكوى') + '</b><span class="muted-sm">' + esc(c.status || '') + '</span></div>' +
+              '<div class="muted-sm">' + esc(c.description || '') + '</div>' +
+            '</div>';
+          }).join('') + '</div>' : '');
+
+      if (hasLocation) {
+        setTimeout(function(){
+          if (typeof L === 'undefined') {
+            var css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            document.head.appendChild(css);
+            var scr = document.createElement('script');
+            scr.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            scr.onload = function(){ initMap(mapId, t.current_lat, t.current_lng, t.name); };
+            document.head.appendChild(scr);
+          } else {
+            initMap(mapId, t.current_lat, t.current_lng, t.name);
+          }
+        }, 200);
+      }
+    } catch(e) {
+      console.error('[HVAC] tech details:', e);
+      var c = document.getElementById('acTechDetailsContent');
+      if (c) c.innerHTML = '<div class="notice err">خطأ: ' + e.message + '</div>';
+    }
+  };
+
+  function initMap(elId, lat, lng, name){
+    try {
+      var el = document.getElementById(elId);
+      if (!el || typeof L === 'undefined') return;
+      var map = L.map(elId).setView([lat, lng], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
+      L.marker([lat, lng]).addTo(map).bindPopup('👷 ' + (name || 'الفني')).openPopup();
+    } catch(e) { console.warn('map:', e); }
+  }
+
+  // ============ 4) إجراءات الإدارة ============
+  window.acDeduct = async function(phone){
+    var amountStr = await InputPrompt.ask('قيمة الخصم (ج.م)', '100', 'خصم من الفني', 'number');
+    if (!amountStr) return;
+    var amount = parseFloat(amountStr);
+    if (!amount || amount <= 0) { Toast.err('قيمة غير صحيحة'); return; }
+    var reason = await InputPrompt.ask('سبب الخصم', 'مثال: تلف جهاز العميل', 'سبب الخصم');
+    if (!reason) return;
+    try {
+      var res = await db.rpc('add_tech_deduction', {
+        p_tech_phone: phone, p_amount: amount, p_reason: reason,
+        p_order_id: null, p_admin_id: state.user ? state.user.email : 'admin'
+      });
+      if (res.error) { Toast.err('فشل: ' + res.error.message); return; }
+      Toast.ok('✅ تم تسجيل خصم ' + money(amount));
+      document.getElementById('acTechDetailsModal')?.remove();
+    } catch(e) { Toast.err('خطأ: ' + e.message); }
+  };
+
+  window.acSuspend = async function(phone){
+    var reason = await InputPrompt.ask('سبب الإيقاف', 'مثال: شكوى من عميل', 'إيقاف مؤقت');
+    if (!reason) return;
+    try {
+      var res = await db.from('tech_apps').update({
+        status: 'pending', availability: 'offline',
+        suspended_reason: reason, suspended_at: new Date().toISOString()
+      }).eq('phone', phone);
+      if (res.error) { Toast.err('فشل: ' + res.error.message); return; }
+      Toast.ok('✅ تم الإيقاف المؤقت');
+      document.getElementById('acTechDetailsModal')?.remove();
+      if (typeof window.__acRefreshTechs === 'function') window.__acRefreshTechs();
+    } catch(e) { Toast.err('خطأ: ' + e.message); }
+  };
+
+  window.acBlacklist = async function(phone){
+    var ok = await Confirm.ask('حظر نهائي؟ لن يستطيع التسجيل مرة أخرى.', 'حظر نهائي', 'نعم، احظر', 'إلغاء');
+    if (!ok) return;
+    try {
+      var res = await db.from('tech_apps').update({
+        status: 'rejected', availability: 'offline',
+        blacklisted: true, suspended_at: new Date().toISOString()
+      }).eq('phone', phone);
+      if (res.error) { Toast.err('فشل: ' + res.error.message); return; }
+      Toast.ok('⛔ تم الحظر النهائي');
+      document.getElementById('acTechDetailsModal')?.remove();
+      if (typeof window.__acRefreshTechs === 'function') window.__acRefreshTechs();
+    } catch(e) { Toast.err('خطأ: ' + e.message); }
+  };
+
+  window.acResume = async function(phone){
+    var ok = await Confirm.ask('إعادة تفعيل الفني؟', 'إعادة تفعيل', 'نعم', 'إلغاء');
+    if (!ok) return;
+    try {
+      var res = await db.from('tech_apps').update({
+        status: 'approved', availability: 'available',
+        suspended_reason: null, suspended_at: null, blacklisted: false
+      }).eq('phone', phone);
+      if (res.error) { Toast.err('فشل: ' + res.error.message); return; }
+      Toast.ok('✅ تم إعادة التفعيل');
+      document.getElementById('acTechDetailsModal')?.remove();
+      if (typeof window.__acRefreshTechs === 'function') window.__acRefreshTechs();
+    } catch(e) { Toast.err('خطأ: ' + e.message); }
+  };
+
+  // ============ 5) زر "تفاصيل" على كارت الفني ============
+  setInterval(function(){
+    var container = document.getElementById('adminProContent');
+    if (!container) return;
+    var cards = container.querySelectorAll('div[style*="border-radius:12px"]');
+    cards.forEach(function(card){
+      if (card.getAttribute('data-details-added')) return;
+      var phoneEl = card.querySelector('div[class="muted-sm"]');
+      if (!phoneEl) return;
+      var phoneMatch = phoneEl.textContent.match(/\d{11}/);
+      if (!phoneMatch) return;
+      var phone = phoneMatch[0];
+
+      var btn = document.createElement('button');
+      btn.className = 'btn sm';
+      btn.textContent = '👁️ تفاصيل كاملة';
+      btn.style.cssText = 'background:#0c4a6e;color:#cffafe;margin-top:8px;width:100%';
+      btn.onclick = function(){ window.acOpenTechDetails(phone); };
+      card.appendChild(btn);
+      card.setAttribute('data-details-added', 'true');
+    });
+  }, 1500);
+
+  ready(function(){
+    console.log('[HVAC] 🎯 Full Tech Management v3.0 ready');
+  });
+})();
+  </script>
 </body>
 </html>
