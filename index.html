@@ -5440,5 +5440,129 @@ if ('serviceWorker' in navigator) {
   origLog.call(console, '%c[HVAC] 🐞 Debug Console ready', 'color:#a78bfa;font-weight:900');
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Location Direct Sync v2.0
+   يستخدم Direct Update بدل RPC (أضمن)
+   ========================================================= */
+(function(){
+  'use strict';
+
+  function ready(cb,t){
+    t=t||0;
+    if(typeof db!=='undefined' && db && typeof safeRead==='function'){ cb(); }
+    else if(t<40){ setTimeout(function(){ ready(cb,t+1); },250); }
+  }
+
+  ready(function(){
+    console.log('[HVAC] 🔧 Location Direct Sync v2.0');
+
+    window.acForceLocationSync = async function(){
+      var tech = safeRead('current_tech', null);
+      if (!tech || !tech.phone) {
+        Toast.err('سجل دخول الأول');
+        return false;
+      }
+
+      var lat, lng;
+      try {
+        Toast.info('📡 جاري تحديد موقعك...');
+        var pos = await new Promise(function(resolve, reject){
+          if (!navigator.geolocation) { reject(new Error('GPS غير مدعوم')); return; }
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true, timeout: 15000, maximumAge: 30000
+          });
+        });
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+      } catch(e) {
+        var msg = 'فشل الحصول على الموقع';
+        if (e.code === 1) msg = 'محتاج تسمح بالوصول للموقع';
+        else if (e.code === 2) msg = 'مفيش إشارة GPS';
+        else if (e.code === 3) msg = 'انتهت المهلة';
+        Toast.err(msg);
+        console.error('[HVAC] geo error:', e);
+        return false;
+      }
+
+      console.log('[HVAC] 📍 محاولة حفظ الموقع:', { phone: tech.phone, lat: lat, lng: lng });
+
+      // Direct Update
+      try {
+        var nowISO = new Date().toISOString();
+        var upd = await db
+          .from('tech_apps')
+          .update({
+            current_lat: lat,
+            current_lng: lng,
+            last_seen: nowISO
+          })
+          .eq('phone', tech.phone);
+
+        if (upd.error) {
+          console.error('[HVAC] ❌ Direct update failed:', upd.error);
+          Toast.err('فشل التحديث: ' + upd.error.message);
+          return false;
+        }
+
+        console.log('[HVAC] ✅ Direct update succeeded');
+
+        // تحقق
+        var check = await db
+          .from('tech_apps')
+          .select('phone, current_lat, current_lng, last_seen')
+          .eq('phone', tech.phone)
+          .maybeSingle();
+
+        if (check.error) {
+          console.warn('[HVAC] verify error:', check.error.message);
+        } else if (check.data) {
+          console.log('[HVAC] ✅ محفوظ في DB:', check.data);
+        } else {
+          console.warn('[HVAC] ⚠️ الرقم مش موجود في DB');
+          Toast.err('رقمك مش مسجل في قاعدة البيانات');
+          return false;
+        }
+
+        safeWrite('current_tech_location', {
+          lat: lat, lng: lng, at: nowISO
+        });
+
+        Toast.ok('✅ تم حفظ الموقع');
+        if (typeof updateTrackingUI === 'function') updateTrackingUI(true);
+        return true;
+
+      } catch(e) {
+        console.error('[HVAC] ❌ Exception:', e);
+        Toast.err('خطأ: ' + e.message);
+        return false;
+      }
+    };
+
+    // Override زرار التتبع
+    window.acToggleTracking = function(){
+      var loc = safeRead('current_tech_location', null);
+      if (loc) {
+        // إيقاف
+        if (window.__acTrackTimer) { clearInterval(window.__acTrackTimer); window.__acTrackTimer = null; }
+        safeRemove('current_tech_location');
+        if (typeof updateTrackingUI === 'function') updateTrackingUI(false);
+        Toast.info('⏹️ تم إيقاف مشاركة الموقع');
+      } else {
+        // بدء
+        window.acForceLocationSync().then(function(ok){
+          if (ok && !window.__acTrackTimer) {
+            window.__acTrackTimer = setInterval(function(){
+              window.acForceLocationSync();
+            }, 60000);
+          }
+        });
+      }
+    };
+
+    console.log('[HVAC] 🎯 Location Direct Sync ready');
+  });
+})();
+  </script>
 </body>
 </html>
