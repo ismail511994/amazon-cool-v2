@@ -5292,5 +5292,153 @@ if ('serviceWorker' in navigator) {
   console.log('[HVAC] 📍 Technician GPS Tracking v1.0 ready');
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Built-in Debug Console
+   يوفر Console مدمج يشتغل على أي جهاز
+   اضغط على الزر 🐞 أو اكتب ?debug=1 في الرابط
+   ========================================================= */
+(function(){
+  'use strict';
+
+  var logs = [];
+  var MAX_LOGS = 200;
+
+  // اعتراض الرسائل
+  var origLog = console.log;
+  var origErr = console.error;
+  var origWarn = console.warn;
+
+  function pushLog(type, args){
+    try {
+      var txt = Array.prototype.slice.call(args).map(function(a){
+        if (typeof a === 'object') {
+          try { return JSON.stringify(a); } catch(e){ return String(a); }
+        }
+        return String(a);
+      }).join(' ');
+      logs.push({ type: type, text: txt, at: new Date().toISOString() });
+      if (logs.length > MAX_LOGS) logs.shift();
+      renderConsole();
+    } catch(e){}
+  }
+
+  console.log = function(){ origLog.apply(console, arguments); pushLog('log', arguments); };
+  console.error = function(){ origErr.apply(console, arguments); pushLog('error', arguments); };
+  console.warn = function(){ origWarn.apply(console, arguments); pushLog('warn', arguments); };
+
+  // CSS
+  var css = document.createElement('style');
+  css.textContent =
+    '#acDebugBtn{position:fixed;bottom:90px;inset-inline-end:18px;z-index:9999;width:44px;height:44px;border-radius:50%;' +
+    'background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:20px;border:2px solid #fff;' +
+    'box-shadow:0 4px 14px rgba(124,58,237,.55);cursor:pointer;display:none;align-items:center;justify-content:center}' +
+    '#acDebugBtn.show{display:flex}' +
+    '#acDebugPanel{position:fixed;inset:5% 3%;z-index:99999;background:#0a0f18;border:2px solid #7c3aed;' +
+    'border-radius:14px;padding:12px;display:none;flex-direction:column;font-family:monospace;direction:ltr}' +
+    '#acDebugPanel.open{display:flex}' +
+    '#acDebugPanel .head{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px solid #334155;margin-bottom:8px;color:#e2e8f0}' +
+    '#acDebugPanel .head h3{margin:0;font-size:14px;direction:rtl}' +
+    '#acDebugPanel .actions{display:flex;gap:6px}' +
+    '#acDebugPanel .actions button{background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer}' +
+    '#acDebugLog{flex:1;overflow:auto;background:#020617;border:1px solid #1e293b;border-radius:8px;padding:8px;font-size:11px;line-height:1.5}' +
+    '#acDebugLog .line{padding:4px 6px;border-bottom:1px solid #0f172a;color:#cbd5e1;word-break:break-all}' +
+    '#acDebugLog .line.error{color:#fca5a5;background:rgba(239,68,68,.08)}' +
+    '#acDebugLog .line.warn{color:#fbbf24;background:rgba(245,158,11,.06)}' +
+    '#acDebugLog .line .time{color:#64748b;margin-right:6px}';
+  document.head.appendChild(css);
+
+  // زر
+  var btn = document.createElement('button');
+  btn.id = 'acDebugBtn';
+  btn.innerHTML = '🐞';
+  btn.title = 'فتح Console';
+  btn.onclick = togglePanel;
+  document.body.appendChild(btn);
+
+  // بانل
+  var panel = document.createElement('div');
+  panel.id = 'acDebugPanel';
+  panel.innerHTML =
+    '<div class="head">' +
+      '<h3>🐞 Console Logs</h3>' +
+      '<div class="actions">' +
+        '<button onclick="window.__acDebugClear()">🗑️ مسح</button>' +
+        '<button onclick="window.__acDebugCopy()">📋 نسخ الكل</button>' +
+        '<button onclick="window.__acDebugClose()">✕ إغلاق</button>' +
+      '</div>' +
+    '</div>' +
+    '<div id="acDebugLog"></div>';
+  document.body.appendChild(panel);
+
+  function togglePanel(){
+    panel.classList.toggle('open');
+    renderConsole();
+  }
+
+  function renderConsole(){
+    var log = document.getElementById('acDebugLog');
+    if (!log) return;
+    var atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+    log.innerHTML = logs.map(function(l){
+      var t = new Date(l.at).toLocaleTimeString('en-GB');
+      return '<div class="line ' + l.type + '"><span class="time">' + t + '</span>' + escapeHtml(l.text) + '</div>';
+    }).join('');
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  window.__acDebugClear = function(){ logs = []; renderConsole(); };
+  window.__acDebugClose = function(){ panel.classList.remove('open'); };
+  window.__acDebugCopy = function(){
+    var txt = logs.map(function(l){ return '[' + l.at + '] ' + l.type.toUpperCase() + ': ' + l.text; }).join('\n');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(txt).then(function(){
+        alert('✅ تم نسخ ' + logs.length + ' سطر');
+      }).catch(function(){
+        alert('مش قادر ينسخ — استخدم Copy يدوي');
+      });
+    } else {
+      alert(txt);
+    }
+  };
+
+  // فعّل الزر لما ندخل لوحة الفني أو الإدارة أو لو ?debug=1
+  function shouldShow(){
+    var url = location.search.toLowerCase();
+    if (url.indexOf('debug=1') !== -1 || url.indexOf('debug=true') !== -1) return true;
+    if (typeof state !== 'undefined') {
+      if (['tech_panel','tech_dashboard','admin'].indexOf(state.page) !== -1) return true;
+    }
+    return false;
+  }
+
+  function updateVisibility(){
+    if (shouldShow()) btn.classList.add('show');
+    else {
+      btn.classList.remove('show');
+      panel.classList.remove('open');
+    }
+  }
+
+  var _render = window.render;
+  if (typeof _render === 'function') {
+    window.render = function(){
+      _render.apply(this, arguments);
+      setTimeout(updateVisibility, 150);
+    };
+  }
+
+  setInterval(updateVisibility, 1500);
+  setTimeout(updateVisibility, 800);
+
+  origLog.call(console, '%c[HVAC] 🐞 Debug Console ready', 'color:#a78bfa;font-weight:900');
+})();
+  </script>
 </body>
 </html>
