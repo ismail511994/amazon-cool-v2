@@ -4861,5 +4861,160 @@ if ('serviceWorker' in navigator) {
   });
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Order Type Filter v1.0
+   فصل طلبات المتجر عن طلبات الصيانة
+   ========================================================= */
+(function(){
+  'use strict';
+
+  var STORAGE_KEY = 'ac_order_filter';
+  var currentFilter = localStorage.getItem(STORAGE_KEY) || 'all';
+
+  // تحديد نوع الطلب
+  function classifyOrder(o){
+    if (!o) return 'other';
+    var t = String(o.service_type || '').toLowerCase();
+    if (t === 'store') return 'store';
+    if (['installation','uninstall','maintenance','periodic','diagnosis','piping','cleaning','gas'].indexOf(t) !== -1) return 'service';
+    return 'other';
+  }
+
+  // إيجاد الطلب من رقمه
+  function findOrder(cleanId){
+    var orders = safeRead('orders', []);
+    return orders.find(function(o){
+      var s = String(o.id);
+      return s === cleanId || s.slice(-8) === cleanId || s.endsWith(cleanId);
+    });
+  }
+
+  // تطبيق الفلتر
+  function applyFilter(){
+    var tbody = document.querySelector('#adminOrdersTable table tbody');
+    if (!tbody) return;
+
+    var rows = tbody.querySelectorAll('tr');
+    var counts = { all: 0, store: 0, service: 0, other: 0 };
+
+    rows.forEach(function(row){
+      var idCell = row.querySelector('td:first-child b');
+      if (!idCell) return;
+
+      var cleanId = idCell.textContent.trim().replace('#','').trim();
+      var order = findOrder(cleanId);
+      var type = classifyOrder(order);
+
+      counts.all++;
+      if (type === 'store') counts.store++;
+      else if (type === 'service') counts.service++;
+      else counts.other++;
+
+      if (currentFilter === 'all') {
+        row.style.display = '';
+      } else if (currentFilter === 'store' && type === 'store') {
+        row.style.display = '';
+      } else if (currentFilter === 'service' && type === 'service') {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    updateCounts(counts);
+  }
+
+  // تحديث الأعداد في الأزرار
+  function updateCounts(counts){
+    var set = function(id, val){
+      var el = document.querySelector('#' + id + ' .count');
+      if (el) el.textContent = val;
+    };
+    set('orderFilterAll', counts.all);
+    set('orderFilterStore', counts.store);
+    set('orderFilterService', counts.service);
+  }
+
+  // تمييز الزر النشط
+  function highlightActive(){
+    document.querySelectorAll('.ac-order-tab').forEach(function(tab){
+      var active = tab.dataset.filter === currentFilter;
+      tab.style.background = active
+        ? 'linear-gradient(135deg,var(--blue),var(--blue2))'
+        : 'var(--card)';
+      tab.style.borderColor = active ? 'transparent' : 'var(--border)';
+      tab.style.color = active ? '#fff' : 'var(--txt)';
+    });
+  }
+
+  // حقن الأزرار
+  function injectTabs(){
+    if (document.getElementById('acOrderFilterTabs')) {
+      highlightActive();
+      applyFilter();
+      return;
+    }
+
+    var wrapper = document.getElementById('adminOrdersTable');
+    if (!wrapper) return;
+
+    var tabs = document.createElement('div');
+    tabs.id = 'acOrderFilterTabs';
+    tabs.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--border)';
+    tabs.innerHTML =
+      '<button class="ac-order-tab" data-filter="all" onclick="window.setOrderFilter(\'all\')" ' +
+        'style="border:1px solid var(--border);background:var(--card);color:var(--txt);padding:9px 14px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">' +
+        '📋 الكل (<span class="count">0</span>)</button>' +
+      '<button class="ac-order-tab" data-filter="store" onclick="window.setOrderFilter(\'store\')" ' +
+        'style="border:1px solid var(--border);background:var(--card);color:var(--txt);padding:9px 14px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">' +
+        '🛒 المتجر (<span class="count">0</span>)</button>' +
+      '<button class="ac-order-tab" data-filter="service" onclick="window.setOrderFilter(\'service\')" ' +
+        'style="border:1px solid var(--border);background:var(--card);color:var(--txt);padding:9px 14px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">' +
+        '🔧 الصيانة (<span class="count">0</span>)</button>';
+
+    wrapper.parentElement.insertBefore(tabs, wrapper);
+
+    highlightActive();
+    setTimeout(applyFilter, 50);
+  }
+
+  // API عام
+  window.setOrderFilter = function(f){
+    currentFilter = f;
+    localStorage.setItem(STORAGE_KEY, f);
+    highlightActive();
+    applyFilter();
+  };
+
+  // راقب الصفحة
+  var observer = null;
+  function startObserver(){
+    var target = document.getElementById('adminProContent');
+    if (!target) {
+      setTimeout(startObserver, 500);
+      return;
+    }
+    if (observer) observer.disconnect();
+    observer = new MutationObserver(function(){
+      setTimeout(function(){
+        if (document.getElementById('adminOrdersTable')) {
+          injectTabs();
+        }
+      }, 200);
+    });
+    observer.observe(target, { childList: true, subtree: true });
+    if (document.getElementById('adminOrdersTable')) injectTabs();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(startObserver, 900); });
+  } else {
+    setTimeout(startObserver, 900);
+  }
+
+  console.log('[HVAC] 🎯 Order Filter Tabs ready');
+})();
+  </script>
 </body>
 </html>
