@@ -6396,5 +6396,121 @@ if ('serviceWorker' in navigator) {
   });
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Terms Separation v3.1
+   - الطوارئ: إقرار الطوارئ فقط
+   - العادي: إقرار الصيانة فقط
+   ========================================================= */
+(function(){
+  'use strict';
+
+  if (typeof window === 'undefined') return;
+
+  // تعديل acCreateOrderWithTerms — يفرق بين الحالتين
+  function patchSubmitHandler(){
+    if (typeof window.acCreateOrderWithTerms !== 'function') return false;
+    if (window.acCreateOrderWithTerms.__termsV31) return true;
+
+    window.acCreateOrderWithTerms = async function(){
+      if (typeof state !== 'undefined' && state.emergency) {
+        // طوارئ — createServiceOrder بيتحقق من emergencyTerms بنفسه
+        if (typeof createServiceOrder === 'function') {
+          await createServiceOrder();
+        }
+        return;
+      }
+
+      // طلب عادي — تحقق من إقرار الصيانة
+      var agreed = document.getElementById('acClientTerms');
+      if (!agreed || !agreed.checked) {
+        Toast.err('يجب الموافقة على شروط الصيانة أولاً');
+        if (agreed) agreed.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      try { safeWrite('client_terms_accepted_at', new Date().toISOString()); } catch(e){}
+
+      if (typeof createServiceOrder === 'function') {
+        await createServiceOrder();
+      }
+    };
+    window.acCreateOrderWithTerms.__termsV31 = true;
+    console.log('[HVAC] ✅ Submit handler patched');
+    return true;
+  }
+
+  // لف دالة pages.services بحيث تفرق بين الحالتين
+  function patchPagesServices(){
+    if (!window.pages || !window.pages.services) return false;
+    if (window.pages.services.__termsV31) return true;
+
+    var _prev = window.pages.services;
+    var _new = function(){
+      var html = _prev.apply(this, arguments);
+
+      // 1) احذف أي إقرار صيانة موجود (من الـ patch القديم)
+      // سنستخدم تاج مؤقت للتتبع بدل الحذف الكامل
+      var hasTerms = html.indexOf('acClientTerms') !== -1;
+      var hasTempSubmit = html.indexOf('data-ac-temp-submit') !== -1;
+
+      if (hasTerms) {
+        // امسح إقرار الصيانة وزر acCreateOrderWithTerms السابق
+        html = html.replace(
+          /<div class="card" style="border:2px solid #f59e0b;background:#1a1508">[\s\S]*?id="acClientTerms"[\s\S]*?<\/label>\s*<\/div>/g,
+          ''
+        );
+        // استبدل زر acCreateOrderWithTerms بتاج مؤقت
+        html = html.replace(
+          /<button class="btn primary block" style="padding:15px;font-size:16px" onclick="acCreateOrderWithTerms\(\)">/g,
+          '<button class="btn primary block" style="padding:15px;font-size:16px" data-ac-temp-submit>'
+        );
+      }
+
+      // 2) لو مش طوارئ: أضف إقرار الصيانة + زر الإرسال المحسن
+      if (!(typeof state !== 'undefined' && state.emergency)) {
+        if (html.indexOf('acClientTerms') === -1) {
+          html = html.replace(
+            /<button class="btn primary block" style="padding:15px;font-size:16px" (data-ac-temp-submit|onclick="createServiceOrder\(\)")>/,
+            window.acRenderTerms() + '<button class="btn primary block" style="padding:15px;font-size:16px" onclick="acCreateOrderWithTerms()">'
+          );
+        }
+      } else {
+        // 3) لو طوارئ: تأكد إن الزر أصلي (مش إقرار صيانة)
+        html = html.replace(
+          /<button class="btn primary block" style="padding:15px;font-size:16px" (data-ac-temp-submit|onclick="acCreateOrderWithTerms\(\)")>/,
+          '<button class="btn primary block" style="padding:15px;font-size:16px" onclick="createServiceOrder()">'
+        );
+      }
+
+      return html;
+    };
+    _new.__termsV31 = true;
+    window.pages.services = _new;
+    console.log('[HVAC] ✅ pages.services patched');
+    return true;
+  }
+
+  // حاول تشتغل لحد ما تنجح (لحد 30 ثانية)
+  var tries = 0;
+  var timer = setInterval(function(){
+    tries++;
+    var ok1 = patchSubmitHandler();
+    var ok2 = patchPagesServices();
+    if (ok1 && ok2) {
+      clearInterval(timer);
+      console.log('[HVAC] 🎯 Terms Separation v3.1 ready');
+    }
+    if (tries > 60) clearInterval(timer);
+  }, 500);
+
+  // شغل مرة واحدة فورية كمان
+  setTimeout(function(){
+    patchSubmitHandler();
+    patchPagesServices();
+  }, 100);
+
+})();
+  </script>
 </body>
 </html>
