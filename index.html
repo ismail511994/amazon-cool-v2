@@ -5016,5 +5016,281 @@ if ('serviceWorker' in navigator) {
   console.log('[HVAC] 🎯 Order Filter Tabs ready');
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Technician GPS Tracking v1.0
+   - زر تفعيل مشاركة الموقع للفني
+   - حالة التوفر (متاح/مشغول/خارج الخدمة)
+   - تحديث تلقائي كل 60 ثانية
+   ========================================================= */
+(function(){
+  'use strict';
+
+  if (typeof window === 'undefined') return;
+
+  var WATCH_INTERVAL = 60000; // 60 ثانية
+  var watchTimer = null;
+
+  function getCurrentTech(){
+    try { return safeRead('current_tech', null); } catch(e){ return null; }
+  }
+
+  function isTechPage(){
+    return typeof state !== 'undefined' && (
+      state.page === 'tech_panel' || state.page === 'tech_dashboard'
+    );
+  }
+
+  // الحصول على الموقع الحالي
+  function getGeoLocation(){
+    return new Promise(function(resolve, reject){
+      if (!navigator.geolocation) {
+        reject(new Error('GPS غير مدعوم في المتصفح ده'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function(pos){
+          resolve({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+          });
+        },
+        function(err){
+          var msg = 'فشل الحصول على الموقع';
+          if (err.code === 1) msg = 'محتاج تسمح بالوصول للموقع';
+          else if (err.code === 2) msg = 'مفيش إشارة GPS';
+          else if (err.code === 3) msg = 'انتهت المهلة';
+          reject(new Error(msg));
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      );
+    });
+  }
+
+  // إرسال الموقع للسيرفر
+  async function pushLocationToServer(tech, loc){
+    if (typeof DEMO !== 'undefined' && DEMO) return;
+    if (typeof db === 'undefined' || !db) return;
+
+    try {
+      var res = await db.rpc('update_tech_location', {
+        p_phone: tech.phone,
+        p_lat: loc.lat,
+        p_lng: loc.lng
+      });
+      if (res.error) {
+        console.warn('[HVAC] 📍 فشل تحديث الموقع:', res.error.message);
+        return false;
+      }
+      console.log('[HVAC] 📍 موقع الفني اتحدث:', loc.lat.toFixed(4), loc.lng.toFixed(4));
+      return true;
+    } catch (e) {
+      console.warn('[HVAC] 📍 خطأ:', e.message);
+      return false;
+    }
+  }
+
+  // تحديث حالة التوفر
+  async function setAvailability(tech, availability){
+    if (typeof db === 'undefined' || !db) return false;
+    try {
+      var res = await db.rpc('set_tech_availability', {
+        p_phone: tech.phone,
+        p_availability: availability
+      });
+      if (res.error) {
+        console.warn('[HVAC] فشل تحديث الحالة:', res.error.message);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // بدء التتبع التلقائي
+  async function startTracking(){
+    var tech = getCurrentTech();
+    if (!tech) { Toast.err('سجل دخول الأول'); return; }
+
+    try {
+      // اطلب الموقع الأول
+      Toast.info('📡 جاري تحديد موقعك...');
+      var loc = await getGeoLocation();
+
+      // ابعته للسيرفر
+      var ok = await pushLocationToServer(tech, loc);
+      if (!ok) { Toast.err('فشل تحديث الموقع'); return; }
+
+      // خزنه محليًا
+      safeWrite('current_tech_location', {
+        lat: loc.lat, lng: loc.lng, at: new Date().toISOString()
+      });
+
+      Toast.ok('✅ تم تفعيل مشاركة الموقع');
+      updateTrackingUI(true);
+
+      // ابدأ التحديث التلقائي
+      if (watchTimer) clearInterval(watchTimer);
+      watchTimer = setInterval(async function(){
+        var t = getCurrentTech();
+        if (!t) { stopTracking(); return; }
+        try {
+          var l = await getGeoLocation();
+          await pushLocationToServer(t, l);
+          safeWrite('current_tech_location', {
+            lat: l.lat, lng: l.lng, at: new Date().toISOString()
+          });
+        } catch(e) { console.warn('[HVAC] 📍 متابعة التحديث:', e.message); }
+      }, WATCH_INTERVAL);
+
+    } catch (e) {
+      Toast.err(e.message || 'فشل تفعيل الموقع');
+    }
+  }
+
+  function stopTracking(){
+    if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
+    safeRemove('current_tech_location');
+    updateTrackingUI(false);
+    Toast.info('⏹️ تم إيقاف مشاركة الموقع');
+  }
+
+  // تحديث حالة الـ UI
+  function updateTrackingUI(active){
+    var trackBtn = document.getElementById('acTrackBtn');
+    var trackStatus = document.getElementById('acTrackStatus');
+    if (trackBtn) {
+      trackBtn.textContent = active ? '⏹️ إيقاف مشاركة الموقع' : '📡 تفعيل مشاركة الموقع';
+      trackBtn.style.background = active ? '#7f1d1d' : '#065f46';
+      trackBtn.style.borderColor = active ? '#991b1b' : '#0b8065';
+    }
+    if (trackStatus) {
+      var loc = safeRead('current_tech_location', null);
+      if (active && loc) {
+        trackStatus.textContent = '📍 موقعك: ' + loc.lat.toFixed(4) + ', ' + loc.lng.toFixed(4) +
+          ' — آخر تحديث: ' + new Date(loc.at).toLocaleTimeString('ar-EG');
+        trackStatus.style.color = '#6ee7b7';
+      } else {
+        trackStatus.textContent = '📍 المشاركة غير مفعلة';
+        trackStatus.style.color = 'var(--muted)';
+      }
+    }
+  }
+
+  // زر التوفر
+  window.acSetAvailability = async function(av){
+    var tech = getCurrentTech();
+    if (!tech) { Toast.err('سجل دخول الأول'); return; }
+    var ok = await setAvailability(tech, av);
+    if (!ok) { Toast.err('فشل تحديث الحالة'); return; }
+    Toast.ok(av === 'available' ? '🟢 متاح الآن' : av === 'busy' ? '🟡 مشغول' : '🔴 خارج الخدمة');
+    highlightAvailability(av);
+  };
+
+  function highlightAvailability(active){
+    ['available','busy','offline'].forEach(function(k){
+      var btn = document.getElementById('acAvail_' + k);
+      if (!btn) return;
+      var isActive = k === active;
+      btn.style.transform = isActive ? 'scale(1.05)' : 'scale(1)';
+      btn.style.opacity = isActive ? '1' : '0.5';
+      btn.style.boxShadow = isActive ? '0 0 0 2px ' + (k === 'available' ? '#10b981' : k === 'busy' ? '#f59e0b' : '#ef4444') : 'none';
+    });
+  }
+
+  // حقن واجهة التتبع في لوحة الفني
+  function injectTrackingUI(){
+    if (!isTechPage()) return;
+    if (document.getElementById('acTechTrackingCard')) return;
+
+    var t = getCurrentTech();
+    if (!t) return;
+
+    var container = document.getElementById('techPanelContent');
+    if (!container) return;
+
+    var card = document.createElement('div');
+    card.id = 'acTechTrackingCard';
+    card.className = 'card';
+    card.style.cssText = 'background:linear-gradient(135deg,#0b2230,#0c1420);border:1px solid #164e63';
+
+    var loc = safeRead('current_tech_location', null);
+    var isActive = !!loc;
+
+    card.innerHTML =
+      '<h3 style="margin:0 0 12px 0;color:#67e8f9">📍 موقعي وحالتي</h3>' +
+
+      '<div style="margin-bottom:14px">' +
+        '<button id="acTrackBtn" onclick="window.acToggleTracking()" ' +
+          'style="width:100%;padding:12px;border-radius:10px;border:1px solid ' + (isActive ? '#991b1b' : '#0b8065') + ';' +
+          'background:' + (isActive ? '#7f1d1d' : '#065f46') + ';color:#fff;font-weight:900;font-size:14px;cursor:pointer">' +
+          (isActive ? '⏹️ إيقاف مشاركة الموقع' : '📡 تفعيل مشاركة الموقع') +
+        '</button>' +
+        '<div id="acTrackStatus" style="margin-top:8px;font-size:11px;text-align:center;' +
+          'color:' + (isActive ? '#6ee7b7' : 'var(--muted)') + '">' +
+          (isActive && loc
+            ? '📍 موقعك: ' + loc.lat.toFixed(4) + ', ' + loc.lng.toFixed(4) + ' — آخر تحديث: ' + new Date(loc.at).toLocaleTimeString('ar-EG')
+            : '📍 المشاركة غير مفعلة') +
+        '</div>' +
+      '</div>' +
+
+      '<div style="border-top:1px dashed var(--border);padding-top:12px">' +
+        '<div style="font-weight:800;font-size:13px;margin-bottom:10px">حالة التوفر:</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">' +
+          '<button id="acAvail_available" onclick="window.acSetAvailability(\'available\')" ' +
+            'style="padding:10px 6px;border-radius:10px;border:1px solid #0b8065;background:#052e2b;color:#6ee7b7;font-weight:900;font-size:11px;cursor:pointer">' +
+            '🟢 متاح</button>' +
+          '<button id="acAvail_busy" onclick="window.acSetAvailability(\'busy\')" ' +
+            'style="padding:10px 6px;border-radius:10px;border:1px solid #78350f;background:#1c1917;color:#fbbf24;font-weight:900;font-size:11px;cursor:pointer">' +
+            '🟡 مشغول</button>' +
+          '<button id="acAvail_offline" onclick="window.acSetAvailability(\'offline\')" ' +
+            'style="padding:10px 6px;border-radius:10px;border:1px solid #7f1d1d;background:#450a0a;color:#fca5a5;font-weight:900;font-size:11px;cursor:pointer">' +
+            '🔴 خارج الخدمة</button>' +
+        '</div>' +
+      '</div>';
+
+    // ضيفها في أول لوحة الفني (بعد كارت الترحيب)
+    var firstCard = container.querySelector('.card');
+    if (firstCard && firstCard.nextSibling) {
+      container.insertBefore(card, firstCard.nextSibling);
+    } else {
+      container.insertBefore(card, container.firstChild);
+    }
+  }
+
+  window.acToggleTracking = function(){
+    var loc = safeRead('current_tech_location', null);
+    if (loc) stopTracking();
+    else startTracking();
+  };
+
+  // راقب الصفحة
+  var observer = null;
+  function startObserver(){
+    var target = document.getElementById('app');
+    if (!target) {
+      setTimeout(startObserver, 500);
+      return;
+    }
+    if (observer) observer.disconnect();
+    observer = new MutationObserver(function(){
+      if (isTechPage()) setTimeout(injectTrackingUI, 400);
+    });
+    observer.observe(target, { childList: true, subtree: true });
+
+    if (isTechPage()) setTimeout(injectTrackingUI, 400);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(startObserver, 1000); });
+  } else {
+    setTimeout(startObserver, 1000);
+  }
+
+  console.log('[HVAC] 📍 Technician GPS Tracking v1.0 ready');
+})();
+  </script>
 </body>
 </html>
