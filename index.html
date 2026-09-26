@@ -4621,5 +4621,94 @@ if ('serviceWorker' in navigator) {
   console.log('[HVAC] ✅ AI Assistant fix جاهز');
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Stock Deduction Fix v1.0
+   يخصم المخزون تلقائياً من Supabase بعد كل عملية شراء
+   ========================================================= */
+(function(){
+  'use strict';
+
+  function waitForApp(cb, tries){
+    tries = tries || 0;
+    if (typeof products !== 'undefined' && typeof saveProducts === 'function' && typeof state !== 'undefined') {
+      cb();
+    } else if (tries < 40) {
+      setTimeout(function(){ waitForApp(cb, tries + 1); }, 250);
+    } else {
+      console.warn('[HVAC] Stock Fix: app not ready');
+    }
+  }
+
+  waitForApp(function(){
+    console.log('[HVAC] 📦 Stock Deduction Fix loaded');
+
+    async function deductStock(items){
+      if (!items || !items.length) return [];
+
+      var changes = [];
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var p = products.find(function(x){ return x.id === item.id; });
+        if (!p) continue;
+        var oldStock = Number(p.stock || 0);
+        var newStock = Math.max(0, oldStock - Number(item.qty || 0));
+        p.stock = newStock;
+        changes.push({ id: p.id, name: p.name, oldStock: oldStock, newStock: newStock });
+      }
+
+      saveProducts();
+
+      if (!DEMO && typeof db !== 'undefined' && db) {
+        for (var j = 0; j < changes.length; j++) {
+          var c = changes[j];
+          try {
+            var res = await db
+              .from('products')
+              .update({ stock: c.newStock, updated_at: new Date().toISOString() })
+              .eq('id', c.id);
+            if (res.error) {
+              console.error('[HVAC] ❌ Stock update failed:', c.name, res.error.message);
+            } else {
+              console.log('[HVAC] ✅ Stock:', c.name, c.oldStock, '→', c.newStock);
+            }
+          } catch (e) {
+            console.error('[HVAC] ❌ Stock sync error:', e);
+          }
+        }
+      }
+
+      return changes;
+    }
+
+    window.deductStockAfterPurchase = deductStock;
+
+    var origConfirm = window.confirmCheckout;
+    if (typeof origConfirm === 'function' && !origConfirm.__stockFixed) {
+      var wrapped = async function(){
+        var snapshot = Array.isArray(state.cart) ? state.cart.map(function(x){ return Object.assign({}, x); }) : [];
+        try {
+          await origConfirm.apply(this, arguments);
+        } catch (e) {
+          console.error('[HVAC] checkout error:', e);
+          return;
+        }
+        if (snapshot.length > 0 && (!state.cart || state.cart.length === 0)) {
+          var changes = await deductStock(snapshot);
+          if (changes.length) {
+            var txt = changes.map(function(c){ return c.name + ': ' + c.oldStock + '→' + c.newStock; }).join(' • ');
+            console.log('[HVAC] 📦 تم خصم المخزون:', txt);
+          }
+        }
+      };
+      wrapped.__stockFixed = true;
+      window.confirmCheckout = wrapped;
+      console.log('[HVAC] ✅ confirmCheckout wrapped');
+    }
+
+    console.log('[HVAC] 🎯 Stock Deduction ready');
+  });
+})();
+  </script>
 </body>
 </html>
