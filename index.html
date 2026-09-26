@@ -4710,5 +4710,156 @@ if ('serviceWorker' in navigator) {
   });
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Stock Protection v2.0
+   - يتحقق من المخزون قبل الإضافة للسلة
+   - يستخدم RPC atomic على Supabase للخصم
+   - يمنع البيع الزائد
+   ========================================================= */
+(function(){
+  'use strict';
+
+  function waitForApp(cb, tries){
+    tries = tries || 0;
+    if (typeof products !== 'undefined' && typeof state !== 'undefined') {
+      cb();
+    } else if (tries < 40) {
+      setTimeout(function(){ waitForApp(cb, tries + 1); }, 250);
+    }
+  }
+
+  waitForApp(function(){
+    console.log('[HVAC] 🛡️ Stock Protection v2.0 loaded');
+
+    var origAddCart = window.addCart;
+    if (typeof origAddCart === 'function' && !origAddCart.__stockProtected) {
+      var wrappedAdd = function(id){
+        var p = products.find(function(x){ return x.id === id; });
+        if (!p) return;
+        var currentStock = Number(p.stock || 0);
+        var inCart = (state.cart || []).find(function(x){ return x.id === id; });
+        var inCartQty = inCart ? inCart.qty : 0;
+        if (currentStock < 1) { Toast.err('❌ المنتج نفد من المخزون'); return; }
+        if (inCartQty + 1 > currentStock) {
+          Toast.err('الكمية المتاحة ' + currentStock + ' بس — إنت عايز ' + (inCartQty + 1));
+          return;
+        }
+        return origAddCart.apply(this, arguments);
+      };
+      wrappedAdd.__stockProtected = true;
+      window.addCart = wrappedAdd;
+      console.log('[HVAC] ✅ addCart protected');
+    }
+
+    var origChangeQty = window.changeQty;
+    if (typeof origChangeQty === 'function' && !origChangeQty.__stockProtected) {
+      var wrappedQty = function(i, delta){
+        var item = state.cart[i];
+        if (!item) return;
+        if (delta > 0) {
+          var p = products.find(function(x){ return x.id === item.id; });
+          if (!p) return;
+          var available = Number(p.stock || 0);
+          if (item.qty + delta > available) {
+            Toast.err('الكمية المتاحة ' + available + ' بس');
+            return;
+          }
+        }
+        return origChangeQty.apply(this, arguments);
+      };
+      wrappedQty.__stockProtected = true;
+      window.changeQty = wrappedQty;
+      console.log('[HVAC] ✅ changeQty protected');
+    }
+
+    async function atomicDeduct(snapshot){
+      if (!snapshot || !snapshot.length) return { ok: true, failures: [] };
+      if (DEMO || typeof db === 'undefined' || !db) {
+        snapshot.forEach(function(item){
+          var p = products.find(function(x){ return x.id === item.id; });
+          if (p) p.stock = Math.max(0, Number(p.stock || 0) - Number(item.qty || 0));
+        });
+        saveProducts();
+        return { ok: true, failures: [] };
+      }
+      var failures = [];
+      for (var i = 0; i < snapshot.length; i++) {
+        var item = snapshot[i];
+        try {
+          var res = await db.rpc('decrement_stock', {
+            p_product_id: item.id,
+            p_qty: Number(item.qty || 0)
+          });
+          if (res.error) { failures.push({ name: item.name, error: res.error.message }); continue; }
+          var data = res.data;
+          if (!data || data.success === false) {
+            failures.push({
+              name: data && data.product_name ? data.product_name : item.name,
+              error: data && data.error ? data.error : 'فشل الخصم',
+              available: data && data.available
+            });
+          } else {
+            console.log('[HVAC] 📦', data.product_name + ':', data.old_stock, '→', data.new_stock);
+            var p = products.find(function(x){ return x.id === item.id; });
+            if (p) p.stock = data.new_stock;
+          }
+        } catch (e) { failures.push({ name: item.name, error: e.message }); }
+      }
+      saveProducts();
+      if (failures.length > 0) {
+        var msgs = failures.map(function(f){
+          return '• ' + f.name + ': ' + f.error + (f.available !== undefined ? ' (متاح: ' + f.available + ')' : '');
+        }).join('\n');
+        return { ok: false, failures: failures, message: msgs };
+      }
+      return { ok: true, failures: [] };
+    }
+
+    window.atomicDeductStock = atomicDeduct;
+
+    var origConfirm = window.confirmCheckout;
+    if (typeof origConfirm === 'function' && !origConfirm.__stockV2) {
+      var wrapped = async function(){
+        var snapshot = Array.isArray(state.cart)
+          ? state.cart.map(function(x){ return Object.assign({}, x); })
+          : [];
+        if (!snapshot.length) return origConfirm.apply(this, arguments);
+        var deductResult = await atomicDeduct(snapshot);
+        if (!deductResult.ok) {
+          Toast.err('فشل الشراء: ' + deductResult.message);
+          console.error('[HVAC] ❌ Stock deduction failed:', deductResult.failures);
+          return;
+        }
+        try { await origConfirm.apply(this, arguments); }
+        catch (e) { console.error('[HVAC] checkout error:', e); }
+      };
+      wrapped.__stockV2 = true;
+      window.confirmCheckout = wrapped;
+      console.log('[HVAC] ✅ confirmCheckout protected');
+    }
+
+    var origOpenCheckout = window.openCheckout;
+    if (typeof origOpenCheckout === 'function' && !origOpenCheckout.__stockV2) {
+      var wrappedOpen = function(){
+        for (var i = 0; i < state.cart.length; i++) {
+          var item = state.cart[i];
+          var p = products.find(function(x){ return x.id === item.id; });
+          if (!p) { Toast.err('منتج مش موجود: ' + item.name); return; }
+          if (Number(p.stock || 0) < Number(item.qty || 0)) {
+            Toast.err('المخزون غير كافٍ: ' + p.name + ' (متاح: ' + p.stock + ')');
+            return;
+          }
+        }
+        return origOpenCheckout.apply(this, arguments);
+      };
+      wrappedOpen.__stockV2 = true;
+      window.openCheckout = wrappedOpen;
+    }
+
+    console.log('[HVAC] 🎯 Stock Protection v2.0 ready');
+  });
+})();
+  </script>
 </body>
 </html>
