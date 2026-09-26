@@ -6647,5 +6647,195 @@ if ('serviceWorker' in navigator) {
   console.log('[HVAC] 🎯 Terms Injection v4.0 ready');
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Professional Terms System v7.0
+   - مربع + زر "اقرأ الشروط" في كل الطلبات
+   - Modal فيه 14 مادة تحمي الشركة + العميل + الفني
+   - الطوارئ: نفس الشروط + إقرار الطوارئ (10 مواد)
+   ========================================================= */
+(function(){
+  'use strict';
+
+  var TERMS = [
+    ['1', 'تعريف الخدمة',
+     'أمازون كول منصة تقنية تعمل كوسيط يربط بين العميل والفني المستقل. المنصة ليست طرفًا في العقد الفني بين العميل والفني، ولا تتحمل مسؤولية مباشرة عن جودة أو نتائج العمل خارج نطاق الإشراف المُتفق عليه.'],
+    ['2', 'مسؤوليات الشركة',
+     'تلتزم الشركة بتوفير فنيين معتمدين خضعوا لاختبارات مهنية، وبمتابعة الطلبات عبر النظام، وتوثيق كل خدمة بتقرير رسمي، وتحصيل عمولة 15% من كل فاتورة مقابل خدمات الوساطة والتنسيق والدعم.'],
+    ['3', 'مسؤوليات العميل',
+     'يلتزم العميل بتقديم معلومات صحيحة عن العطل والعنوان ورقم الهاتف، وبالتواجد شخصيًا أو من ينوب عنه أثناء تنفيذ العمل، وبعدم مغادرة الموقع قبل انتهاء الخدمة، وبسداد قيمة الخدمة نقدًا للفني عند إتمامها.'],
+    ['4', 'مسؤوليات الفني',
+     'يلتزم الفني بالحضور في الموعد المتفق عليه، وبإحضار الأدوات والقطع اللازمة، وبإصدار تقرير فني موثّق عبر التطبيق يشمل التشخيص والإصلاح والتكلفة، وبالحفاظ على ممتلكات العميل وأمان المكان.'],
+    ['5', 'حماية الشركة',
+     'لا تتحمل الشركة مسؤولية أي أضرار ناتجة عن إهمال العميل، أو تقديم معلومات مغلوطة، أو التلاعب بالجهاز من طرف ثالث. كما لا تتحمل مسؤولية أي فعل فردي يصدر من الفني خارج نطاق التقرير الفني المعتمد.'],
+    ['6', 'حماية العميل',
+     'يحق للعميل رفض التقرير الفني قبل اعتماده، وطلب فني بديل عند عدم الرضا، وتقديم شكوى رسمية عبر التطبيق مع رقم الطلب. يحق للعميل مراجعة قيمة الفاتورة والاعتراض عليها قبل السداد.'],
+    ['7', 'حماية الفني',
+     'يحق للفني رفض الطلب دون إبداء أسباب، وإيقاف العمل عند وجود خطر على سلامته، وتوثيق حالة الجهاز بالصور قبل البدء. في حال تعرض الفني لاتهام غير مثبت، يحق له المطالبة بتعويض عن الضرر الأدبي والمعنوي.'],
+    ['8', 'مسؤولية المفقودات',
+     'لا تتحمل الشركة مسؤولية فقدان أو تلف أي ممتلكات خاصة داخل مكان الخدمة (مال، مجوهرات، أجهزة، وثائق). يلتزم العميل بحفظ ممتلكاته الشخصية، ويلتزم الفني بعدم لمس أي شيء خارج نطاق العمل.'],
+    ['9', 'سياسة الشكاوى',
+     'تُقدّم الشكوى فورًا عبر التطبيق مع رقم الطلب وصور إن أمكن. تلتزم الشركة بالرد والتحقيق خلال 48 ساعة. في حال ثبوت الإخلال من الفني، تُطبّق خصومات مالية وقد يصل الأمر إلى الإيقاف أو الحظر النهائي.'],
+    ['10', 'الإلغاء والاسترداد',
+     'يحق للعميل إلغاء الطلب مجانًا قبل انطلاق الفني. في حال الإلغاء بعد الانطلاق، تُحتسب رسوم انتقال بنسبة 25% من قيمة الخدمة. الطلبات المُنفذة لا تُرد قيمتها إلا في حال وجود عيب فني مُثبت خلال 30 يومًا.'],
+    ['11', 'الضمان',
+     'ضمان على العمالة لمدة 30 يومًا من تاريخ التنفيذ. لا يشمل الضمان قطع الغيار الموردة، أو الأعطال الناتجة عن سوء الاستخدام، أو التدخل من طرف ثالث بعد إتمام الخدمة.'],
+    ['12', 'العمولة والدفع',
+     'العميل على علم بأن الشركة تحصل على عمولة 15% من قيمة كل فاتورة. الدفع يكون نقدًا للفني مباشرة عند اعتماد التقرير. لا تطلب الشركة أي مبلغ مقدم عبر التطبيق.'],
+    ['13', 'الخصوصية والبيانات',
+     'تلتزم الشركة بحماية بيانات العميل والفني (الاسم، الهاتف، العنوان) وعدم مشاركتها مع أي طرف ثالث خارج نطاق تنفيذ الخدمة. يحق للمستخدم طلب حذف بياناته عبر التواصل الرسمي.'],
+    ['14', 'الموافقة الإلكترونية',
+     'بتحديد المربع أدناه، يقر العميل بأنه قرأ وفهم جميع المواد الأربعة عشر، وأن هذا التحديد يُعد موافقة إلكترونية ملزمة قانونيًا. تُحفظ نسخة من الإقرار في سجلات الطلب.']
+  ];
+
+  // ============ Modal الشروط ============
+  window.acOpenTermsModal = function(){
+    var existing = document.getElementById('acTermsModal');
+    if (existing) existing.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'acTermsModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;padding:14px;overflow:auto;display:flex;align-items:flex-start;justify-content:center';
+
+    var itemsHTML = TERMS.map(function(it){
+      return '<div style="border-bottom:1px solid var(--border);padding:12px 0">' +
+        '<div style="color:#fbbf24;font-weight:900;margin-bottom:6px;font-size:13px">المادة ' + it[0] + ' — ' + it[1] + '</div>' +
+        '<div style="font-size:12.5px;line-height:1.9;color:var(--txt)">' + it[2] + '</div>' +
+      '</div>';
+    }).join('');
+
+    modal.innerHTML = '<div style="background:var(--card);border:2px solid #f59e0b;border-radius:16px;padding:18px;max-width:720px;width:100%;margin:auto">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">' +
+        '<h3 style="margin:0;color:#fbbf24;font-size:16px">📖 الشروط والأحكام — أمازون كول</h3>' +
+        '<button class="btn sm" onclick="document.getElementById(\'acTermsModal\').remove()">✕</button>' +
+      '</div>' +
+      '<p style="color:var(--muted);font-size:11px;margin:0 0 14px 0">يرجى قراءة جميع المواد بحذر. الإصدار 1.0 — آخر تحديث 2026</p>' +
+      itemsHTML +
+      '<div style="background:var(--bg2);padding:12px;border-radius:10px;border:1px solid var(--border);margin-top:14px;text-align:center;font-size:11px;color:var(--muted)">' +
+        'أمازون كول — الإسكندرية / البحيرة — جميع الحقوق محفوظة © 2026' +
+      '</div>' +
+      '<div style="position:sticky;bottom:-18px;background:var(--card);padding:14px 0 0 0;margin-top:14px">' +
+        '<label style="display:flex;gap:10px;align-items:flex-start;background:var(--bg2);padding:12px;border-radius:10px;border:1px solid #f59e0b;cursor:pointer;margin-bottom:10px">' +
+          '<input type="checkbox" id="acTermsModalCheck" style="width:22px;height:22px;margin-top:2px;cursor:pointer;flex-shrink:0">' +
+          '<span style="font-size:12.5px;line-height:1.6;color:#fbbf24"><b>أُقر بأنني قرأت وفهمت جميع المواد الأربعة عشر وأوافق عليها</b></span>' +
+        '</label>' +
+        '<button class="btn primary block" onclick="acAcceptTermsFromModal()" style="padding:13px;font-size:14px">✅ موافق — إغلاق</button>' +
+      '</div>' +
+    '</div>';
+
+    document.body.appendChild(modal);
+  };
+
+  window.acAcceptTermsFromModal = function(){
+    var modalCheck = document.getElementById('acTermsModalCheck');
+    if (!modalCheck || !modalCheck.checked) {
+      Toast.err('يجب الموافقة على الشروط أولًا');
+      return;
+    }
+    // sync مع المربع في الصفحة
+    var pageCheck = document.getElementById('acGlobalTermsCheck');
+    if (pageCheck) pageCheck.checked = true;
+    // خزّن
+    try { safeWrite('global_terms_accepted_at', new Date().toISOString()); } catch(e){}
+    // اقفل
+    document.getElementById('acTermsModal')?.remove();
+    Toast.ok('✅ تم تسجيل موافقتك على الشروط');
+  };
+
+  // ============ مربع الشروط المصغّر في الصفحة ============
+  function termsBoxHTML(){
+    return '<div id="acGlobalTerms" class="card" style="border:2px solid #f59e0b;background:linear-gradient(135deg,#1a1508,#0f172a);margin-bottom:14px;padding:14px">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+        '<span style="font-size:22px">⚖️</span>' +
+        '<div style="flex:1">' +
+          '<div style="color:#fbbf24;font-weight:900;font-size:14px">الشروط والأحكام</div>' +
+          '<div style="color:var(--muted);font-size:11px">اقرأ الشروط قبل إتمام الطلب</div>' +
+        '</div>' +
+      '</div>' +
+      '<button class="btn block" onclick="acOpenTermsModal()" style="background:#78350f;color:#fef3c7;border:1px solid #a16207;padding:11px;font-weight:900;margin-bottom:10px;font-size:13px">' +
+        '📖 اقرأ الشروط والأحكام كاملة' +
+      '</button>' +
+      '<label style="display:flex;gap:10px;align-items:flex-start;background:var(--bg2);padding:11px;border-radius:10px;border:1px solid #f59e0b;cursor:pointer">' +
+        '<input type="checkbox" id="acGlobalTermsCheck" style="width:20px;height:20px;margin-top:2px;cursor:pointer;flex-shrink:0">' +
+        '<span style="font-size:12.5px;line-height:1.6;color:#fbbf24"><b>أوافق على جميع الشروط والأحكام</b></span>' +
+      '</label>' +
+    '</div>';
+  }
+
+  // ============ حقن الإقرار في صفحة الخدمات ============
+  function injectTermsIfNeeded(){
+    var main = document.getElementById('app');
+    if (!main) return;
+    var svcType = document.getElementById('svcType');
+    if (!svcType) return;
+
+    var submitBtn = main.querySelector('button[onclick*="createServiceOrder"], button[onclick*="acSubmitWithTerms"]');
+    if (!submitBtn) return;
+
+    if (submitBtn.getAttribute('data-ac-terms-v7') === 'done') return;
+
+    // امسح أي إقرار قديم
+    var old = document.getElementById('acGlobalTerms');
+    if (old) old.remove();
+    var oldMaint = document.getElementById('acMaintenanceTerms');
+    if (oldMaint) oldMaint.remove();
+
+    // ضيف مربع الشروط (في كل الحالات — طوارئ أو عادي)
+    var div = document.createElement('div');
+    div.innerHTML = termsBoxHTML();
+    var termsEl = div.firstElementChild;
+    submitBtn.parentNode.insertBefore(termsEl, submitBtn);
+
+    submitBtn.setAttribute('onclick', 'acSubmitWithTerms()');
+    submitBtn.setAttribute('data-ac-terms-v7', 'done');
+  }
+
+  // ============ زر الإرسال ============
+  window.acSubmitWithTerms = async function(){
+    var isEmergency = (typeof state !== 'undefined' && state.emergency === true);
+
+    // 1) الشروط العامة في كل الحالات
+    var globalCheck = document.getElementById('acGlobalTermsCheck');
+    if (!globalCheck || !globalCheck.checked) {
+      Toast.err('يجب الموافقة على الشروط والأحكام أولًا');
+      var card = document.getElementById('acGlobalTerms');
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // 2) الطوارئ: تحقق إضافي من إقرار الطوارئ
+    if (isEmergency) {
+      var emgCheck = document.getElementById('emergencyTerms');
+      if (!emgCheck || !emgCheck.checked) {
+        Toast.err('يجب الموافقة على إقرار خدمة الطوارئ أيضًا');
+        if (emgCheck) emgCheck.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      try { safeWrite('emergency_terms_accepted_at', new Date().toISOString()); } catch(e){}
+    }
+
+    try { safeWrite('global_terms_accepted_at', new Date().toISOString()); } catch(e){}
+
+    if (typeof createServiceOrder === 'function') {
+      await createServiceOrder();
+    }
+  };
+
+  // ============ Observer ============
+  var observer = null;
+  function startObserver(){
+    var target = document.getElementById('app');
+    if (!target) { setTimeout(startObserver, 400); return; }
+    if (observer) observer.disconnect();
+    observer = new MutationObserver(function(){ setTimeout(injectTermsIfNeeded, 100); });
+    observer.observe(target, { childList: true, subtree: true });
+    setTimeout(injectTermsIfNeeded, 300);
+  }
+  setInterval(injectTermsIfNeeded, 2000);
+  startObserver();
+
+  console.log('[HVAC] 🎯 Professional Terms System v7.0 ready');
+})();
+  </script>
 </body>
 </html>
