@@ -5805,5 +5805,299 @@ if ('serviceWorker' in navigator) {
   });
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Tech Management v2.0
+   يستخدم MutationObserver لتقوية تاب الفنيين
+   ========================================================= */
+(function(){
+  'use strict';
+
+  function ready(cb,t){
+    t=t||0;
+    if(typeof db!=='undefined' && db && typeof safeRead==='function'){ cb(); }
+    else if(t<40){ setTimeout(function(){ ready(cb,t+1); },250); }
+  }
+
+  // ============================================
+  // 1) تسجيل دخول الفني من Supabase
+  // ============================================
+  window.techLogin = async function(){
+    var p = document.getElementById('techPhone');
+    if (!p || !p.value.trim()) { Toast.err('اكتب رقم الموبايل'); return; }
+    var phone = p.value.trim();
+
+    if (!/^01[0-9]{9}$/.test(phone)) {
+      Toast.err('رقم موبايل غير صحيح');
+      return;
+    }
+
+    Toast.info('⏳ جاري التحقق...');
+
+    try {
+      var res = await db
+        .from('tech_apps')
+        .select('id, name, phone, city, status')
+        .eq('phone', phone)
+        .eq('status', 'approved')
+        .maybeSingle();
+
+      if (res.error) {
+        console.error('[HVAC] techLogin error:', res.error);
+        Toast.err('خطأ في الاتصال');
+        return;
+      }
+
+      if (!res.data) {
+        Toast.err('رقمك غير مسجل أو لسه مش معتمد');
+        return;
+      }
+
+      safeWrite('current_tech', {
+        phone: res.data.phone,
+        name: res.data.name,
+        city: res.data.city,
+        id: res.data.id
+      });
+
+      Toast.ok('أهلاً ' + res.data.name);
+      render();
+
+    } catch(e) {
+      console.error('[HVAC] techLogin:', e);
+      Toast.err('خطأ: ' + e.message);
+    }
+  };
+
+  // ============================================
+  // 2) حقن الأزرار في تاب الفنيين
+  // ============================================
+  var ENHANCE_FLAG = 'data-ac-enhanced';
+
+  async function enhanceTechPane(){
+    var container = document.getElementById('adminProContent');
+    if (!container) return;
+
+    // تأكد إننا في تاب الفنيين (بالكلمات الرئيسية)
+    var text = container.textContent || '';
+    if (text.indexOf('الفنيون') === -1 && text.indexOf('المتقدمون') === -1) return;
+
+    // لو محسّن بالفعل، تجاهل
+    if (container.getAttribute(ENHANCE_FLAG) === 'v2') return;
+
+    // جب الفنيين من Supabase
+    try {
+      var res = await db
+        .from('tech_apps')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (res.error) {
+        console.warn('[HVAC] tech fetch:', res.error);
+        return;
+      }
+
+      var techs = res.data || [];
+
+      // استبدل المحتوى
+      container.innerHTML = buildTechUI(techs);
+      container.setAttribute(ENHANCE_FLAG, 'v2');
+
+      // اربط الأزرار
+      container.querySelectorAll('[data-tech-action]').forEach(function(btn){
+        btn.onclick = function(){
+          acTechAction(btn.dataset.techPhone, btn.dataset.techAction);
+        };
+      });
+
+    } catch(e) {
+      console.error('[HVAC] enhanceTechPane:', e);
+    }
+  }
+
+  function buildTechUI(techs){
+    var approved = techs.filter(function(t){ return t.status === 'approved'; });
+    var pending = techs.filter(function(t){ return t.status === 'pending' || !t.status; });
+    var rejected = techs.filter(function(t){ return t.status === 'rejected'; });
+    var available = approved.filter(function(t){ return t.availability === 'available'; });
+
+    var statsHTML =
+      '<div class="admin-pro-card">' +
+        '<h3>📊 إحصائيات</h3>' +
+        '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px">' +
+          '<div class="admin-mini-stat"><b>' + techs.length + '</b><span>الإجمالي</span></div>' +
+          '<div class="admin-mini-stat"><b style="color:#10b981">' + approved.length + '</b><span>مقبول</span></div>' +
+          '<div class="admin-mini-stat"><b style="color:#f59e0b">' + pending.length + '</b><span>قيد الانتظار</span></div>' +
+          '<div class="admin-mini-stat"><b style="color:#ef4444">' + rejected.length + '</b><span>مرفوض</span></div>' +
+        '</div>' +
+        '<div style="margin-top:10px;text-align:center;font-size:11px;color:#67e8f9">' +
+          '🟢 ' + available.length + ' فني متاح دلوقتي' +
+        '</div>' +
+      '</div>';
+
+    var listHTML = '<div class="admin-pro-card">' +
+      '<div class="row between" style="margin-bottom:12px">' +
+        '<h3 style="margin:0">👷 الفنيين (' + techs.length + ')</h3>' +
+        '<button class="btn sm" onclick="window.__acRefreshTechs()">🔄 تحديث</button>' +
+      '</div>';
+
+    if (!techs.length) {
+      listHTML += '<div class="notice info">لا يوجد فنيين مسجلين.</div>';
+    } else {
+      listHTML += techs.map(buildTechCard).join('');
+    }
+
+    listHTML += '</div>';
+
+    return statsHTML + listHTML;
+  }
+
+  function buildTechCard(t){
+    var status = t.status || 'pending';
+    var statusColor = status === 'approved' ? '#10b981' :
+                      status === 'rejected' ? '#ef4444' : '#f59e0b';
+    var statusLabel = status === 'approved' ? '✅ مقبول' :
+                      status === 'rejected' ? '❌ مرفوض' : '⏳ قيد الانتظار';
+
+    var availHtml = '';
+    if (status === 'approved') {
+      var av = t.availability || 'available';
+      var avColor = av === 'available' ? '#10b981' :
+                    av === 'busy' ? '#f59e0b' : '#64748b';
+      var avText = av === 'available' ? '🟢 متاح' :
+                   av === 'busy' ? '🟡 مشغول' : '⚪ غير متصل';
+      availHtml = '<span style="background:' + avColor + ';color:#fff;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:900;margin-right:6px">' + avText + '</span>';
+    }
+
+    var lastSeen = t.last_seen
+      ? new Date(t.last_seen).toLocaleString('ar-EG')
+      : '—';
+
+    var location = (t.current_lat && t.current_lng)
+      ? t.current_lat.toFixed(4) + ', ' + t.current_lng.toFixed(4)
+      : '—';
+
+    // Escape quotes
+    var phone = String(t.phone || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+    var actionsHtml = '';
+    if (status !== 'approved') {
+      actionsHtml += '<button class="btn sm green" data-tech-action="approve" data-tech-phone="' + phone + '">✅ قبول</button>';
+    } else {
+      actionsHtml += '<button class="btn sm red" data-tech-action="suspend" data-tech-phone="' + phone + '">🚫 فصل</button>';
+    }
+    if (status !== 'rejected') {
+      actionsHtml += '<button class="btn sm red" data-tech-action="reject" data-tech-phone="' + phone + '">❌ رفض</button>';
+    }
+
+    return '<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--bg2)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:180px">' +
+          '<div style="font-weight:900;font-size:14px">' + esc(t.name || 'بدون اسم') + '</div>' +
+          '<div style="margin-top:6px">' +
+            '<span style="background:' + statusColor + ';color:#fff;padding:3px 8px;border-radius:99px;font-size:10px;font-weight:900">' + statusLabel + '</span>' +
+            availHtml +
+          '</div>' +
+          '<div class="muted-sm" style="margin-top:6px">📞 ' + esc(t.phone || '—') + '</div>' +
+          '<div class="muted-sm">📍 ' + esc(t.city || '—') + '</div>' +
+          '<div class="muted-sm">💼 ' + esc(t.exp || '—') + '</div>' +
+          '<div class="muted-sm">🏆 ' + (t.total_completed || 0) + ' طلب مكتمل</div>' +
+          '<div class="muted-sm" style="margin-top:4px">🗺️ ' + location + '</div>' +
+          '<div class="muted-sm">🕐 ' + lastSeen + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">' +
+        actionsHtml +
+      '</div>' +
+    '</div>';
+  }
+
+  // إجراء الإدارة
+  async function acTechAction(phone, action){
+    var labels = { approve: 'قبول', reject: 'رفض', suspend: 'فصل' };
+    var messages = {
+      approve: 'قبول الفني وتفعيله؟',
+      reject: 'رفض طلب الفني؟',
+      suspend: 'فصل الفني؟ هيقدر يقدم تاني لو أراد.'
+    };
+
+    var ok = await Confirm.ask(messages[action], labels[action], 'نعم', 'إلغاء');
+    if (!ok) return;
+
+    var newStatus = action === 'approve' ? 'approved' :
+                    action === 'reject' ? 'rejected' : 'pending';
+
+    try {
+      var res = await db
+        .from('tech_apps')
+        .update({
+          status: newStatus,
+          availability: action === 'approve' ? 'available' : 'offline'
+        })
+        .eq('phone', phone);
+
+      if (res.error) {
+        Toast.err('فشل: ' + res.error.message);
+        return;
+      }
+
+      Toast.ok('تم: ' + labels[action]);
+
+      // إعادة تحميل التاب
+      var c = document.getElementById('adminProContent');
+      if (c) c.removeAttribute(ENHANCE_FLAG);
+      enhanceTechPane();
+
+    } catch(e) {
+      Toast.err('خطأ: ' + e.message);
+    }
+  }
+
+  window.__acRefreshTechs = function(){
+    var c = document.getElementById('adminProContent');
+    if (c) c.removeAttribute(ENHANCE_FLAG);
+    enhanceTechPane();
+  };
+
+  // ============================================
+  // 3) راقب التاب
+  // ============================================
+  function startObserver(){
+    var target = document.getElementById('adminProContent');
+    if (!target) {
+      setTimeout(startObserver, 500);
+      return;
+    }
+
+    var observer = new MutationObserver(function(){
+      setTimeout(enhanceTechPane, 300);
+    });
+
+    observer.observe(target, { childList: true, subtree: true });
+
+    // شغل مرة واحدة عند الفتح
+    setTimeout(enhanceTechPane, 500);
+    console.log('[HVAC] 👷 Tech enhancer observer ready');
+  }
+
+  // ابدأ من أول ما نفتح الصفحة
+  ready(function(){
+    console.log('[HVAC] 👷 Tech Management v2.0 loaded');
+    setTimeout(startObserver, 800);
+  });
+
+  // كمان على أي تنقل
+  var _render = window.render;
+  if (typeof _render === 'function') {
+    window.render = function(){
+      _render.apply(this, arguments);
+      if (typeof state !== 'undefined' && state.page === 'admin') {
+        setTimeout(startObserver, 500);
+      }
+    };
+  }
+
+})();
+                 </script>
 </body>
 </html>
