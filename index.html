@@ -4604,5 +4604,22 @@ if ('serviceWorker' in navigator) {
   LOG.ok('🎯 Admin Order Fix v8.0 ready');
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Fix AI Assistant Function Name
+   يحوّل أي استدعاء لـ ai-assistant إلى rapid-responder
+   ========================================================= */
+(function(){
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = function(url, options) {
+    if (typeof url === 'string' && url.includes('/functions/v1/ai-assistant')) {
+      url = url.replace('/functions/v1/ai-assistant', '/functions/v1/rapid-responder');
+      console.log('[HVAC] 🔄 تحويل اسم الـ Function: ai-assistant → rapid-responder');
+    }
+    return originalFetch(url, options);
+  };
+  console.log('[HVAC] ✅ AI Assistant fix جاهز');
+})();
+  </script>
 </body>
 </html>
