@@ -6512,5 +6512,140 @@ if ('serviceWorker' in navigator) {
 
 })();
   </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Terms Injection v4.0
+   يستخدم MutationObserver لإضافة الإقرار مباشرة في DOM
+   ========================================================= */
+(function(){
+  'use strict';
+
+  // ============ نصوص الإقرارات ============
+  function maintenanceTermsHTML(){
+    return '<div id="acMaintenanceTerms" class="card" style="border:2px solid #f59e0b;background:#1a1508;margin-bottom:14px">' +
+      '<h3 style="color:#fbbf24;margin:0 0 12px 0">⚖️ إقرار وشروط خدمة الصيانة</h3>' +
+      '<div style="background:var(--bg2);padding:14px;border-radius:10px;border:1px solid var(--border);font-size:13px;line-height:1.9;max-height:340px;overflow-y:auto">' +
+        '<p><b style="color:#fbbf24">المادة 1 — طبيعة الخدمة:</b> شركة أمازون كول وسيط تقني يربط العميل بالفني، وغير مسؤولة عن أفعال الفني الفردية خارج نطاق الخدمة المتفق عليها.</p>' +
+        '<p><b style="color:#fbbf24">المادة 2 — حضور العميل:</b> يلتزم العميل بالتواجد شخصيًا أثناء تنفيذ الفني للعمل، وعدم مغادرة المكان قبل انتهاء الخدمة. في حال عدم التواجد يتحمل العميل كامل المسؤولية عن أي تلف أو فقدان.</p>' +
+        '<p><b style="color:#fbbf24">المادة 3 — مسؤولية المفقودات:</b> لا تتحمل الشركة مسؤولية فقدان أو تلف أي ممتلكات خاصة داخل مكان الخدمة (مال، مجوهرات، أجهزة، وثائق). العميل مسؤول عن حفظ ممتلكاته.</p>' +
+        '<p><b style="color:#fbbf24">المادة 4 — الاتهامات بالسرقة:</b> في حال وجود شكوك أو اتهامات، يتعهد العميل باتباع الإجراءات القانونية الرسمية. الشركة تلتزم بالتعاون الكامل مع التحقيقات.</p>' +
+        '<p><b style="color:#fbbf24">المادة 5 — العمولة والدفع:</b> العميل على علم بأن الشركة تحصل على عمولة 15% من كل فاتورة مقابل الوساطة. الدفع نقدًا للفني مباشرة عند إتمام الخدمة.</p>' +
+        '<p><b style="color:#fbbf24">المادة 6 — الضمان:</b> ضمان على العمالة 30 يومًا. لا يشمل قطع الغيار أو الأعطال الناتجة عن سوء الاستخدام.</p>' +
+        '<p><b style="color:#fbbf24">المادة 7 — الشكاوى:</b> تُقدّم الشكوى فورًا عبر التطبيق مع رقم الطلب وصور إن أمكن. الرد خلال 48 ساعة.</p>' +
+        '<p><b style="color:#fbbf24">المادة 8 — إيقاف الفني:</b> يحق للشركة إيقاف الفني مؤقتًا لحين التحقيق، وتستمر الخدمة عبر فني آخر.</p>' +
+        '<p style="margin:0"><b style="color:#fbbf24">المادة 9 — الموافقة الإلكترونية:</b> بتحديد المربع أدناه، يقر العميل بأنه قرأ وفهم جميع المواد ويُعد التحديد موافقة إلكترونية ملزمة قانونيًا.</p>' +
+      '</div>' +
+      '<label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;cursor:pointer;background:var(--bg2);padding:12px;border-radius:10px;border:1px solid #f59e0b">' +
+        '<input type="checkbox" id="acMaintenanceTermsCheck" style="width:22px;height:22px;margin-top:2px;cursor:pointer;flex-shrink:0">' +
+        '<span style="font-size:13px;line-height:1.6;color:#fbbf24"><b>أُقر بأنني قرأت وفهمت جميع الشروط وأوافق عليها</b></span>' +
+      '</label>' +
+    '</div>';
+  }
+
+  // ============ مراقبة الصفحة وإضافة الإقرار ============
+  function injectTermsIfNeeded(){
+    var main = document.getElementById('app');
+    if (!main) return;
+
+    // هل إحنا في صفحة الخدمات؟
+    var svcType = document.getElementById('svcType');
+    if (!svcType) return; // مش صفحة خدمات
+
+    var isEmergency = (typeof state !== 'undefined' && state.emergency === true);
+    var submitBtn = main.querySelector('button[onclick*="createServiceOrder"]');
+
+    if (!submitBtn) return;
+
+    // علم لمنع التكرار
+    if (submitBtn.getAttribute('data-ac-terms-done') === 'v4') return;
+
+    // امسح أي إقرار قديم
+    var oldMaint = document.getElementById('acMaintenanceTerms');
+    if (oldMaint) oldMaint.remove();
+
+    // لو مش طوارئ → ضيف إقرار الصيانة
+    if (!isEmergency) {
+      // تحقق إذا الإقرار موجود بالفعل
+      if (!document.getElementById('acMaintenanceTerms')) {
+        var div = document.createElement('div');
+        div.innerHTML = maintenanceTermsHTML();
+        var termsEl = div.firstElementChild;
+
+        // ضيفه قبل زر الإرسال
+        submitBtn.parentNode.insertBefore(termsEl, submitBtn);
+
+        // غيّر onclick للزر
+        submitBtn.setAttribute('onclick', 'acSubmitWithTerms()');
+      }
+    } else {
+      // طوارئ → سيب الزر على createServiceOrder (بتتحقق من emergencyTerms بنفسها)
+      // مش هنغير حاجة
+    }
+
+    submitBtn.setAttribute('data-ac-terms-done', 'v4');
+  }
+
+  // ============ زر الإرسال المحسن ============
+  window.acSubmitWithTerms = async function(){
+    var isEmergency = (typeof state !== 'undefined' && state.emergency === true);
+
+    if (isEmergency) {
+      // طوارئ — createServiceOrder بيتحقق من emergencyTerms
+      if (typeof createServiceOrder === 'function') {
+        await createServiceOrder();
+      }
+      return;
+    }
+
+    // عادي — تحقق من إقرار الصيانة
+    var agreed = document.getElementById('acMaintenanceTermsCheck');
+    if (!agreed || !agreed.checked) {
+      Toast.err('يجب الموافقة على شروط الصيانة أولًا');
+      var card = document.getElementById('acMaintenanceTerms');
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    try { safeWrite('maintenance_terms_accepted_at', new Date().toISOString()); } catch(e){}
+
+    if (typeof createServiceOrder === 'function') {
+      await createServiceOrder();
+    }
+  };
+
+  // ============ مراقب مستمر ============
+  var observer = null;
+  function startObserver(){
+    var target = document.getElementById('app');
+    if (!target) {
+      setTimeout(startObserver, 400);
+      return;
+    }
+    if (observer) observer.disconnect();
+    observer = new MutationObserver(function(){
+      setTimeout(injectTermsIfNeeded, 100);
+    });
+    observer.observe(target, { childList: true, subtree: true });
+    setTimeout(injectTermsIfNeeded, 300);
+    console.log('[HVAC] 👁️ Terms observer running');
+  }
+
+  // مراقب إضافي كل 2 ثانية كـ safety
+  setInterval(injectTermsIfNeeded, 2000);
+
+  startObserver();
+
+  // عند تغيير الصفحة
+  var _render = window.render;
+  if (typeof _render === 'function') {
+    window.render = function(){
+      _render.apply(this, arguments);
+      setTimeout(injectTermsIfNeeded, 250);
+    };
+  }
+
+  console.log('[HVAC] 🎯 Terms Injection v4.0 ready');
+})();
+  </script>
 </body>
 </html>
