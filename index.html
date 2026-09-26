@@ -4403,5 +4403,206 @@ if ('serviceWorker' in navigator) {
 })();
 
 </script>
+  <script>
+/* =========================================================
+   AMAZON COOL — Admin Order Fix v8.0
+   يحل: خطأ تحديث الحالة + ترتيب الطلبات + تمييز الطوارئ
+   ========================================================= */
+(function(){
+  'use strict';
+
+  /* ========== 1) إصلاح adminSetStatus — الحفظ على Supabase ========== */
+  window.adminSetStatus = async function(id, status, btn){
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+    
+    const at = new Date().toISOString();
+    const orders = safeRead('orders', []);
+    const order = orders.find(o => o.id === id);
+    
+    if (!order) {
+      Toast.err('الطلب غير موجود');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    
+    // تحديث محلي
+    order.status = status;
+    order.timeline = Array.isArray(order.timeline) ? order.timeline : [];
+    order.timeline.push({ status, at, by: 'admin' });
+    order.updated_at = at;
+    safeWrite('orders', orders);
+    
+    // تحديث Supabase
+    if (typeof DEMO !== 'undefined' && !DEMO && typeof db !== 'undefined' && db) {
+      try {
+        LOG.info('📤 تحديث الطلب:', id, '→', status);
+        const { error } = await db
+          .from('orders')
+          .update({
+            status: status,
+            timeline: order.timeline,
+            updated_at: at
+          })
+          .eq('id', id);
+        
+        if (error) {
+          LOG.err('❌ خطأ Supabase:', error);
+          let msg = 'فشل التحديث: ' + (error.message || 'خطأ');
+          if (error.code === '42501') msg = 'RLS يمنع التحديث — راجع السياسات';
+          else if (error.code === 'PGRST301') msg = 'الطلب مش موجود في Supabase';
+          Toast.err(msg);
+          if (btn) btn.disabled = false;
+          return;
+        }
+        LOG.ok('✅ تم الحفظ في Supabase');
+      } catch (e) {
+        LOG.err('❌ Exception:', e);
+        Toast.err('خطأ في الاتصال: ' + (e.message || e));
+        if (btn) btn.disabled = false;
+        return;
+      }
+    }
+    
+    Toast.ok('تم تحديث الحالة إلى: ' + status);
+    
+    // اقفل المودال المفتوح
+    document.querySelectorAll('div[style*="position:fixed"]').forEach(m => {
+      if (m.textContent && m.textContent.includes(String(id).slice(-8))) {
+        m.remove();
+      }
+    });
+    
+    // تحديث صفحة الإدارة
+    if (typeof adminRefresh === 'function') {
+      await adminRefresh();
+    }
+  };
+
+  /* ========== 2) CSS للبادج النابض ========== */
+  const s = document.createElement('style');
+  s.textContent = `
+    .admin-urgent-row {
+      background: linear-gradient(90deg, rgba(127,29,29,.28), transparent 70%) !important;
+      border-right: 3px solid #ef4444;
+    }
+    .admin-urgent-badge {
+      display: inline-block;
+      background: #7f1d1d;
+      color: #fecaca;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 900;
+      margin-inline-start: 6px;
+      animation: sosPulseAdmin 2s infinite;
+      vertical-align: middle;
+    }
+    @keyframes sosPulseAdmin {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.7); }
+      50%     { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    }
+  `;
+  document.head.appendChild(s);
+
+  /* ========== 3) مراقب الجدول — بادج + ترتيب ========== */
+  let processing = false;
+  
+  function processTable(){
+    if (processing) return;
+    processing = true;
+    try {
+      const tbody = document.querySelector('#adminOrdersTable table tbody');
+      if (!tbody) return;
+      
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      if (!rows.length) return;
+      
+      const orders = safeRead('orders', []);
+      
+      // أضف بادج للطوارئ
+      rows.forEach(row => {
+        const idCell = row.querySelector('td:first-child b');
+        if (!idCell) return;
+        const orderIdText = idCell.textContent.trim();
+        const cleanId = orderIdText.replace('#', '').trim();
+        
+        const order = orders.find(o => 
+          String(o.id).slice(-8) === cleanId || 
+          String(o.id) === cleanId
+        );
+        
+        if (!order) return;
+        
+        const isEmg = order.details?.emergency === true || order.details?.urgency === 'emergency';
+        const isActive = !['done','completed','cancelled'].includes(order.status);
+        
+        if (isEmg && isActive) {
+          if (!row.classList.contains('admin-urgent-row')) {
+            row.classList.add('admin-urgent-row');
+          }
+          if (!row.querySelector('.admin-urgent-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'admin-urgent-badge';
+            badge.textContent = '🚨 طوارئ';
+            idCell.parentElement.appendChild(badge);
+          }
+        }
+      });
+      
+      // رتّب: طوارئ أولاً
+      const emgRows = rows.filter(r => r.classList.contains('admin-urgent-row'));
+      const normalRows = rows.filter(r => !r.classList.contains('admin-urgent-row'));
+      
+      if (emgRows.length > 0 && normalRows.length > 0) {
+        const firstEmgIdx = rows.findIndex(r => r.classList.contains('admin-urgent-row'));
+        const firstNormalIdx = rows.findIndex(r => !r.classList.contains('admin-urgent-row'));
+        
+        if (firstEmgIdx > firstNormalIdx) {
+          [...emgRows, ...normalRows].forEach(r => tbody.appendChild(r));
+        }
+      }
+    } finally {
+      setTimeout(() => { processing = false; }, 80);
+    }
+  }
+  
+  /* ========== 4) راقب تغييرات الجدول ========== */
+  let observer = null;
+  
+  function startObserver(){
+    const target = document.getElementById('adminProContent');
+    if (!target) {
+      setTimeout(startObserver, 500);
+      return;
+    }
+    
+    if (observer) observer.disconnect();
+    
+    observer = new MutationObserver(() => {
+      setTimeout(processTable, 120);
+    });
+    
+    observer.observe(target, { childList: true, subtree: true });
+    LOG.ok('👁️ مراقب طلبات الأدمن شغال');
+    setTimeout(processTable, 600);
+  }
+  
+  // ابدأ المراقبة لما ندخل صفحة الإدارة
+  const _oldRender = window.render;
+  window.render = function(){
+    _oldRender();
+    if (typeof state !== 'undefined' && state.page === 'admin') {
+      setTimeout(startObserver, 400);
+    }
+  };
+  
+  // ابدأ فوراً لو إحنا في الإدارة
+  if (typeof state !== 'undefined' && state.page === 'admin') {
+    setTimeout(startObserver, 600);
+  }
+  
+  LOG.ok('🎯 Admin Order Fix v8.0 ready');
+})();
+  </script>
 </body>
 </html>
