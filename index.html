@@ -7237,19 +7237,84 @@ async function acUpdateBell(){
   }catch(e){}
 }
 let acTechPoll=null,acLastTechNotice='';
-async function acPollTechNotifications(){
-  const t=typeof getCurrentTech==='function'?getCurrentTech():safeRead('current_tech',null);if(!t||!db)return;
+
+async function acMarkTechNotificationsRead(phone){
+  const p=String(phone||'').trim();
+  if(!p||!db)return false;
+
   try{
-    const r=await db.rpc('get_tech_notifications',{p_phone:t.phone});
-    const rows=r.data||[];const unread=rows.filter(x=>!x.read_at);
+    const r=await db.rpc('mark_tech_notifications_read',{
+      p_phone:p
+    });
+
+    if(r.error)throw r.error;
+
+    return r.data===true;
+  }catch(e){
+    console.warn(
+      '[AC tech notifications read]',
+      e?.message||e
+    );
+    return false;
+  }
+}
+
+async function acPollTechNotifications(){
+  const t=
+    typeof getCurrentTech==='function'
+      ?getCurrentTech()
+      :safeRead('current_tech',null);
+
+  if(!t||!db)return;
+
+  try{
+    const r=await db.rpc('get_tech_notifications',{
+      p_phone:t.phone
+    });
+
+    if(r.error)throw r.error;
+
+    const rows=r.data||[];
+    const unread=rows.filter(x=>!x.read_at);
+
     if(unread.length){
-      const latest=unread[0];const key=String(latest.id);
-      if(key!==acLastTechNotice){acLastTechNotice=key;Toast.info('🔔 '+latest.title+': '+latest.body);
-        if('Notification' in window&&Notification.permission==='granted')new Notification(latest.title,{body:latest.body});
+      const latest=unread[0];
+      const key=String(latest.id);
+
+      if(key!==acLastTechNotice){
+        acLastTechNotice=key;
+
+        Toast.info(
+          '🔔 '+latest.title+': '+latest.body
+        );
+
+        if(
+          'Notification' in window &&
+          Notification.permission==='granted'
+        ){
+          try{
+            new Notification(
+              latest.title,
+              {body:latest.body}
+            );
+          }catch(e){}
+        }
+
+        await acMarkTechNotificationsRead(t.phone);
       }
     }
-  }catch(e){}
+
+  }catch(e){
+    console.warn(
+      '[AC tech notifications poll]',
+      e?.message||e
+    );
+  }
 }
+
+window.acMarkTechNotificationsRead=
+  acMarkTechNotificationsRead;
+  
 function acStartNotificationSystem(){
   acUpdateBell();clearInterval(acTechPoll);acTechPoll=setInterval(()=>{acUpdateBell();acPollTechNotifications();},15000);acPollTechNotifications();
 }
@@ -7340,7 +7405,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function injectClientImageBox(){
     var problem=document.getElementById('svcProblem'); if(!problem) return;
     if(document.getElementById('acClientImages')) return;
-    var host=problem.closest('.card') || problem.parentElement;
+    if(created && files.length){toast('📸 جاري رفع صور العطل...','info');var media=await uploadFiles(created.id,files,'fault');await saveMediaToOrder(created.id,media);if(media.length)toast('تم رفع '+media.length+' صورة للعطل','ok');}var host=problem.closest('.card') || problem.parentElement;
     if(!host) return;
     var box=document.createElement('div'); box.id='acClientImages'; box.className='card'; box.style.cssText='margin-top:12px;border:1px solid #0284c7;background:linear-gradient(135deg,#0b1727,#10243a)';
     box.innerHTML='<h3 style="margin:0 0 8px;color:#67e8f9">📸 صور العطل</h3><p class="muted-sm" style="margin:0 0 10px">ارفع حتى 5 صور للجهاز أو العطل. الصور الكبيرة يتم ضغطها تلقائيًا.</p><input id="acOrderImages" type="file" accept="image/*" multiple style="width:100%"><div id="acImagePreview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px"></div>';
