@@ -7405,7 +7405,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function injectClientImageBox(){
     var problem=document.getElementById('svcProblem'); if(!problem) return;
     if(document.getElementById('acClientImages')) return;
-    if(created && files.length){toast('📸 جاري رفع صور العطل...','info');var media=await uploadFiles(created.id,files,'fault');await saveMediaToOrder(created.id,media);if(media.length)toast('تم رفع '+media.length+' صورة للعطل','ok');}var host=problem.closest('.card') || problem.parentElement;
+    function injectClientImageBox(){
+  var problem=document.getElementById('svcProblem'); if(!problem) return;
+  if(document.getElementById('acClientImages')) return;
+  var host=problem.closest('.card') || problem.parentElement;
+  if(!host) return;
     if(!host) return;
     var box=document.createElement('div'); box.id='acClientImages'; box.className='card'; box.style.cssText='margin-top:12px;border:1px solid #0284c7;background:linear-gradient(135deg,#0b1727,#10243a)';
     box.innerHTML='<h3 style="margin:0 0 8px;color:#67e8f9">📸 صور العطل</h3><p class="muted-sm" style="margin:0 0 10px">ارفع حتى 5 صور للجهاز أو العطل. الصور الكبيرة يتم ضغطها تلقائيًا.</p><input id="acOrderImages" type="file" accept="image/*" multiple style="width:100%"><div id="acImagePreview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px"></div>';
