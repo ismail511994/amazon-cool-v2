@@ -4320,6 +4320,7 @@ async function loadAdminComplaints(){
       diagnosis:()=>`<div class="admin-pro-card"><h3>قاعدة الأعطال والتشخيص</h3><p class="muted">تم ربط أدوات التشخيص الموجودة في التطبيق بلوحة الإدارة. افتح صفحة التشخيص لإجراء تحليل فني أو تطوير قاعدة الأكواد.</p><div class="admin-actions"><button class="btn primary" onclick="setPage('diagnosis')">فتح التشخيص</button><button class="btn" onclick="setPage('calculators')">فتح الحاسبات</button></div></div>`,
       ai_assistant:adminAIPane};
     el.innerHTML=(panes[tab]||adminDashboard)();
+  if(tab==='complaints') setTimeout(loadAdminComplaints,0);
   };
 
   window.adminRefresh=async function(){
