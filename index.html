@@ -4246,7 +4246,7 @@ if ('serviceWorker' in navigator) {
         <button onclick="adminProTab('products')">📦 المخزون</button>
       </div>
       <div class="admin-pro-tabs">
-        ${[['dashboard','الرئيسية'],['orders','الطلبات'],['tech','الفنيون'],['customers','العملاء'],['products','المخزون'],['services','الخدمات'],['finance','المالية'],['reports','التقارير'],['diagnosis','الأعطال والتشخيص'],['ai_assistant','🤖 المساعد الذكي']].map(([k,l],i)=>`<button class="${i===0?'active':''}" data-admin-tab="${k}" onclick="adminProTab('${k}')">${l}</button>`).join('')}
+        ${[['dashboard','الرئيسية'],['orders','الطلبات'],['tech','الفنيون'],['customers','العملاء'],['products','المخزون'],['services','الخدمات'],['finance','المالية'],['reports','التقارير'],['complaints','📢 الشكاوى'],['diagnosis','الأعطال والتشخيص'],['ai_assistant','🤖 المساعد الذكي']].map(([k,l],i)=>`<button class="${i===0?'active':''}" data-admin-tab="${k}" onclick="adminProTab('${k}')">${l}</button>`).join('')}
       </div>
       <div id="adminProContent"></div>
     </div>`;
