@@ -4210,7 +4210,68 @@ if ('serviceWorker' in navigator) {
     }
   };
 
-  function adminReportsPane(){
+  async function adminComplaintStatus(id,status){
+  if(!isAdmin()||!db){Toast.err('يلزم صلاحية الإدارة');return;}
+  const r=await db.from('tech_complaints').update({status}).eq('id',id);
+  if(r.error){Toast.err('تعذر تحديث الشكوى: '+r.error.message);return;}
+  Toast.ok('تم تحديث حالة الشكوى');
+  adminProTab('complaints');
+}
+
+function adminComplaintsPane(){
+  if(!db) return '<div class="admin-pro-card"><div class="notice err">Supabase غير متصل.</div></div>';
+  return `<div class="admin-pro-card">
+    <div class="row between">
+      <h3>📢 الشكاوى</h3>
+      <button class="btn sm" onclick="adminProTab('complaints')">↻ تحديث</button>
+    </div>
+    <div id="adminComplaintsList">
+      <div class="notice info">جارٍ تحميل الشكاوى...</div>
+    </div>
+  </div>`;
+}
+
+async function loadAdminComplaints(){
+  const el=document.getElementById('adminComplaintsList');
+  if(!el||!db)return;
+
+  const r=await db.from('tech_complaints')
+    .select('*')
+    .order('created_at',{ascending:false})
+    .limit(100);
+
+  if(r.error){
+    el.innerHTML='<div class="notice err">تعذر تحميل الشكاوى: '+esc(r.error.message)+'</div>';
+    return;
+  }
+
+  const rows=r.data||[];
+
+  el.innerHTML=rows.length
+    ? rows.map(c=>`
+      <div class="admin-pro-card" style="margin-top:10px">
+        <div class="row between">
+          <strong>📢 شكوى #${esc(String(c.id||''))}</strong>
+          <span class="badge">${esc(c.status||'pending')}</span>
+        </div>
+        <div class="muted-sm" style="margin-top:6px">
+          الفني: ${esc(c.tech_phone||c.phone||'غير محدد')}
+        </div>
+        <div style="margin-top:8px">
+          ${esc(c.complaint||c.message||c.reason||'لا توجد تفاصيل')}
+        </div>
+        <div class="muted-sm" style="margin-top:6px">
+          ${esc(c.created_at||'')}
+        </div>
+        <div class="row" style="gap:6px;margin-top:10px">
+          <button class="btn sm" onclick="adminComplaintStatus('${esc(String(c.id||''))}','reviewing')">قيد المراجعة</button>
+          <button class="btn sm" onclick="adminComplaintStatus('${esc(String(c.id||''))}','resolved')">تم الحل</button>
+          <button class="btn sm" onclick="adminComplaintStatus('${esc(String(c.id||''))}','closed')">إغلاق</button>
+        </div>
+      </div>
+    `).join('')
+    : '<div class="muted-sm">لا توجد شكاوى مسجلة.</div>';
+}
     const completed=adminOrdersCache.filter(o=>o.status==='completed'||o.status==='done');
     const types={};
     adminOrdersCache.forEach(o=>types[o.service_type]=(types[o.service_type]||0)+1);
