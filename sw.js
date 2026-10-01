@@ -1,4 +1,4 @@
-const CACHE='amazon-cool-hvac-v13';
+const CACHE='amazon-cool-hvac-v14';
 const CORE=['./','./index.html','./manifest.webmanifest','./icon.svg'];
 const NETWORK_ONLY_HOSTS=['supabase.co','supabase.in','paymob.com','fawry.com'];
 function isNetworkOnly(req){
