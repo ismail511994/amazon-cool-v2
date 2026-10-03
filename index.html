@@ -1240,6 +1240,8 @@ async function submitAuth(e) {
     
     loadUserCart();
     loadWishlist();
+    /* FIX: تحقق من صلاحيات الأدمن مباشرة بعد تسجيل الدخول */
+    if(typeof verifyAdminServerSide==='function'){ await verifyAdminServerSide(); }
     saveSession();
     closeAuth();
     Toast.ok('تم بنجاح');
