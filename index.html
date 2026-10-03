@@ -8094,15 +8094,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 if(window.AmazonCoolRedesign && typeof window.AmazonCoolRedesign.refresh==='function'){
   registerPageHook(window.AmazonCoolRedesign.refresh);
 }
-  
-/* Hide Pro Suite from non-admin nav. */
+  /* Hide Pro Suite from non-admin nav — post-render cleanup. */
 (function(){
-  const __origNav=window.navItems;
-  if(typeof __origNav!=='function')return;
-  window.navItems=function(){
-    const items=__origNav();
-    if(typeof isAdmin==='function'&&isAdmin())return items;
-    return items.filter(x=>x[0]!=='prosuite');
+  const __origRenderNav=window.renderNav;
+  if(typeof __origRenderNav!=='function')return;
+  window.renderNav=function(){
+    __origRenderNav.apply(this,arguments);
+    /* إذا كان المستخدم admin → اترك كل شيء كما هو */
+    if(typeof isAdmin==='function'&&isAdmin())return;
+    /* غير ذلك → احذف أي زر يحتوي "Pro Suite" من الشريط */
+    const nav=document.getElementById('nav');
+    if(!nav)return;
+    nav.querySelectorAll('button').forEach(function(btn){
+      const t=(btn.textContent||'').trim();
+      if(t.indexOf('Pro Suite')!==-1) btn.remove();
+    });
   };
 })();
 
