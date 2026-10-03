@@ -8094,6 +8094,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 if(window.AmazonCoolRedesign && typeof window.AmazonCoolRedesign.refresh==='function'){
   registerPageHook(window.AmazonCoolRedesign.refresh);
 }
+  
+/* Hide Pro Suite from non-admin nav. */
+(function(){
+  const __origNav=window.navItems;
+  if(typeof __origNav!=='function')return;
+  window.navItems=function(){
+    const items=__origNav();
+    if(typeof isAdmin==='function'&&isAdmin())return items;
+    return items.filter(x=>x[0]!=='prosuite');
+  };
+})();
 
   /* FIX #15: gate exposed technician DOM injection functions. */
   ['injectTrackingUI','injectTechOffer'].forEach(function(name){
