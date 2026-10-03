@@ -4424,7 +4424,19 @@ async function loadAdminComplaints(){
   window.adminProTab=function(tab){
     document.querySelectorAll('[data-admin-tab]').forEach(b=>b.classList.toggle('active',b.dataset.adminTab===tab));
     const el=document.getElementById('adminProContent');if(!el)return;
-    const panes={dashboard:adminDashboard,orders:adminOrdersPane,tech:adminTechPane,customers:adminCustomersPane,products:adminProductsPane,services:adminServicesPane,finance:adminFinancePane,reports:adminReportsPane,complaints:adminComplaintsPane,diagnosis:()=>`<div class="admin-pro-card"><h3>قاعدة الأعطال والتشخيص</h3><p class="muted">تم ربط أدوات التشخيص الموجودة في التطبيق بلوحة الإدارة. افتح صفحة التشخيص لإجراء تحليل فني أو تطوير قاعدة الأكواد.</p><div class="admin-actions"><button class="btn primary" onclick="setPage('diagnosis')">فتح التشخيص</button><button class="btn" onclick="setPage('calculators')">فتح الحاسبات</button></div></div>`,ai_assistant:adminAIPane};
+    const panes={
+  dashboard:adminDashboard,
+  orders:adminOrdersPane,
+  tech:adminTechPane,
+  customers:adminCustomersPane,
+  products:adminProductsPane,
+  services:adminServicesPane,
+  finance:adminFinancePane,
+  reports:()=>`<div class="admin-pro-card"><h3>📊 التقارير</h3><p class="muted">قيد التطوير — سيتم عرض التقارير التفصيلية هنا.</p></div>`,
+  complaints:adminComplaintsPane,
+  diagnosis:()=>`<div class="admin-pro-card"><h3>قاعدة الأعطال والتشخيص</h3><p class="muted">تم ربط أدوات التشخيص بلوحة الإدارة.</p><div class="admin-actions"><button class="btn primary" onclick="setPage('diagnosis')">فتح التشخيص</button><button class="btn" onclick="setPage('calculators')">فتح الحاسبات</button></div></div>`,
+  ai_assistant:adminAIPane
+};
     el.innerHTML=(panes[tab]||adminDashboard)();
   if(tab==='complaints') setTimeout(loadAdminComplaints,0);
   };
