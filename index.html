@@ -3933,7 +3933,9 @@ if ('serviceWorker' in navigator) {
     if(!details.address){Toast.err('اكتب العنوان');return;}
     if(!details.bookingDate){Toast.err('اختار يوم الزيارة');return;}
     const order={
-      id:uid('o'),client_id:state.user.id,
+      id:uid('o'),
+      idempotency_key: (crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random()),
+      client_id:state.user.id,
       client_name:(state.profile&&state.profile.full_name)||state.user.email,
       service_type:document.getElementById('svcType')?.value||'maintenance',
       details,total_amount:0,status:'pending',created_at:new Date().toISOString(),
@@ -3953,10 +3955,19 @@ if ('serviceWorker' in navigator) {
     }
     if(!DEMO && db){
       try{
-        const {error}=await db.from('orders').insert({
-          id:order.id,client_id:order.client_id,client_name:order.client_name,
-          service_type:order.service_type,details:order.details,total_amount:0,status:'pending'
-        });
+        const dup=await db.from('orders').select('id').eq('idempotency_key',order.idempotency_key).maybeSingle();
+if(dup.error) throw dup.error;
+if(dup.data){
+  Toast.info('الطلب موجود بالفعل');
+  state.emergency=false;
+  setPage('orders');
+  return;
+}
+const {error}=await db.from('orders').insert({
+  id:order.id,client_id:order.client_id,client_name:order.client_name,
+  service_type:order.service_type,details:order.details,total_amount:0,status:'pending',
+  idempotency_key:order.idempotency_key
+});
         if(error) throw error;
       }catch(e){
         LOG.err('Service order Supabase insert:',e);
@@ -7946,12 +7957,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    if(nav) nav.setAttribute('aria-label','التنقل الرئيسي');
  }
  function run(){try{addBottomNav();enhanceHeader()}catch(e){}}
- var oldSet=window.setPage;
- if(typeof oldSet==='function'&&!window.__acRedesignSetPage){
-   window.__acRedesignSetPage=true;
-   window.setPage=function(){var r=oldSet.apply(this,arguments);setTimeout(run,40);return r};
+ if(typeof window.registerPageHook==='function'){
+  window.registerPageHook(run);
+}else{
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
  }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,120)});else setTimeout(run,120);
  window.addEventListener('resize',function(){setTimeout(addBottomNav,30)});
  window.AmazonCoolRedesign={version:'2026.10',refresh:run};
 })();
@@ -8078,6 +8088,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   ['injectTrackingUI','injectClientImageBox','injectReportImages','injectTechOffer'].forEach(function(name){
     if(typeof window[name]==='function')registerPageHook(window[name]);
   });
+
+  
+/* Register Bottom Nav refresh as a page hook too. */
+if(window.AmazonCoolRedesign && typeof window.AmazonCoolRedesign.refresh==='function'){
+  registerPageHook(window.AmazonCoolRedesign.refresh);
+}
 
   /* FIX #15: gate exposed technician DOM injection functions. */
   ['injectTrackingUI','injectTechOffer'].forEach(function(name){
