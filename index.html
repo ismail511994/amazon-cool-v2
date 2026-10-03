@@ -7628,7 +7628,20 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   async function assignNext(order){
     if(!order||!order.customer_lat||!order.customer_lng||typeof db==='undefined'||!db)return false;
     var candidates=order.assignment_candidates||await nearest(Number(order.customer_lat),Number(order.customer_lng));
-    if(!candidates.length){toast('لا يوجد فني متاح حاليًا — الطلب في انتظار الإدارة','info');return false;}
+    /* FIX: أظهر الرسائل مرة واحدة فقط ثم أوقف التكرار */
+if(order.assignment_status==='awaiting_tech')return false;
+if(!candidates.length){
+  order.assignment_status='awaiting_tech';
+  order.timeline=Array.isArray(order.timeline)?order.timeline:[];
+  order.timeline.push({status:'awaiting_tech',at:now()});
+  upsertLocal(order);
+  try{ await db.from('orders').update({assignment_status:'awaiting_tech',timeline:order.timeline}).eq('id',order.id); }catch(_){}
+  toast('لا يوجد فني متاح حاليًا — الطلب في انتظار الإدارة','info');
+  setTimeout(function(){
+    toast('في حال توفر فني بالقرب منك سيتم إعلامكم، شكرًا لتعاونكم معنا','ok',6000);
+  },3000);
+  return false;
+}
     order.assignment_candidates=candidates;order.assignment_index=Number(order.assignment_index||0);
     var c=candidates[order.assignment_index];if(!c){order.assignment_status='admin_required';upsertLocal(order);await db.from('orders').update({assignment_status:'admin_required'}).eq('id',order.id);return false;}
     var phone=c.phone||c.tech_phone; if(!phone)return false;
