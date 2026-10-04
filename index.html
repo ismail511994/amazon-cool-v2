@@ -8433,5 +8433,52 @@ if(window.AmazonCoolRedesign && typeof window.AmazonCoolRedesign.refresh==='func
   }
 })();
 </script>
+  <style id="ac-header-sidebar-layout">
+/* ============================================================
+   Header full width + Sidebar starts below header
+   ============================================================ */
+
+/* 1) التطبيق بعرض الشاشة كاملة (لا هامش جانبي) */
+.app{
+  max-width:100%!important;
+  padding:0!important;
+}
+
+/* 2) الرأس (الشعار) بعرض الشاشة من الحافة للحافة */
+.top{
+  position:sticky!important;
+  top:0!important;
+  margin:0!important;
+  padding:14px 16px!important;
+  border-radius:0!important;
+  border-left:0!important;
+  border-right:0!important;
+  border-top:0!important;
+  width:100%!important;
+  box-sizing:border-box!important;
+  border-bottom:1px solid rgba(148,163,184,.18)!important;
+}
+
+/* 3) المحتوى أسفل الرأس + مساحة يمنى للشريط */
+#app{
+  padding:14px 100px 110px 14px!important;
+  box-sizing:border-box!important;
+}
+
+/* 4) الشريط الجانبي يبدأ من أسفل الرأس */
+#nav{
+  top:110px!important;
+  bottom:16px!important;
+  height:auto!important;
+  max-height:none!important;
+}
+
+/* 5) شاشات ضيقة */
+@media (max-width:480px){
+  .top{padding:12px 14px!important}
+  #app{padding:12px 82px 110px 12px!important}
+  #nav{top:98px!important;bottom:12px!important}
+}
+  </style>
 </body>
 </html>
