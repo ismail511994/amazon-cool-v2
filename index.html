@@ -8480,5 +8480,32 @@ if(window.AmazonCoolRedesign && typeof window.AmazonCoolRedesign.refresh==='func
   #nav{top:98px!important;bottom:12px!important}
 }
   </style>
+  <script id="ac-add-profile-nav">
+/* إعادة زر "حسابي" إلى الشريط الجانبي */
+(function(){
+  'use strict';
+  var __origNavItems=window.navItems;
+  if(typeof __origNavItems!=='function')return;
+  if(__origNavItems.__acProfileAdded)return;
+
+  window.navItems=function(){
+    var items=__origNavItems.apply(this,arguments);
+    /* لا تضعه مرتين */
+    if(items.some(function(x){return x[0]==='profile';}))return items;
+
+    /* ابحث عن موضع زر "خروج" — أو أضفه قبل الأخير */
+    var cartIdx=items.findIndex(function(x){return x[0]==='cart';});
+    var insertAt=(cartIdx>=0)?cartIdx+1:items.length;
+
+    /* لو المستخدم غير مسجل → "دخول"، مسجل → "حسابي" */
+    var isLoggedIn=!!(window.state&&window.state.user);
+    if(isLoggedIn){
+      items.splice(insertAt,0,['profile','👤 حسابي']);
+    }
+    return items;
+  };
+  window.navItems.__acProfileAdded=true;
+})();
+  </script>
 </body>
 </html>
