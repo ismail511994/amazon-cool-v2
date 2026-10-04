@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#050b14;--bg2:#081524;--bg3:#0a1a2e;
@@ -662,7 +663,7 @@ a{text-decoration:none;color:inherit}
       </div>
       <div class="field">
         <label>رقم الموبايل</label>
-        <input type="tel" placeholder="01xxxxxxxxx" value="01066049634">
+        <input id="otpPhoneInput" type="tel" placeholder="01xxxxxxxxx" value="01066049634">
       </div>
       <button class="btn primary block lg" onclick="showScreen('otp')">📱 إرسال رمز التحقق</button>
       <div style="text-align:center;margin-top:20px;color:var(--muted);font-size:11.5px;line-height:1.8">
@@ -678,7 +679,7 @@ a{text-decoration:none;color:inherit}
       <div class="login-hero">
         <div class="logo-xl">🔐</div>
         <h1>رمز التحقق</h1>
-        <p>أرسلنا رمزًا مكوّنًا من 6 أرقام إلى<br><b style="color:var(--cyan)">01066049634</b></p>
+        <h1>رمز التحقق</h1><p>أرسلنا رمزًا مكوّنًا من 6 أرقام إلى<br><b id="otpPhone" style="color:var(--cyan)">01066049634</b></p>
       </div>
       <div class="otp-row">
         <input class="otp-cell" maxlength="1" inputmode="numeric" oninput="otpInput(this)">
@@ -1217,23 +1218,104 @@ a{text-decoration:none;color:inherit}
 </div>
 
 <script>
+// ============================================================
+// AMAZON COOL — TECH APP
+// Phase 1: Auth + Load Orders + Accept
+// ============================================================
+
+const CONFIG = {
+  SUPABASE_URL: 'https://hvbmhhsropichpgbuczf.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_JiCvyv3G8-g7LKWsCrEcNA_wG7HHQtA',
+  WHATSAPP: '201066049634'
+};
+
+const db = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+const state = {
+  user: null,
+  tech: null,
+  orders: { available: [], mine: [] },
+  currentScreen: 'login',
+  pendingPhone: null
+};
+
+const LOG = {
+  info: (...a) => console.log('%c[TECH]', 'color:#22d3ee;font-weight:900', ...a),
+  ok:   (...a) => console.log('%c[TECH ✅]', 'color:#10b981;font-weight:900', ...a),
+  err:  (...a) => console.error('%c[TECH ❌]', 'color:#ef4444;font-weight:900', ...a)
+};
+
+const esc = v => String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const money = n => Number(n||0).toLocaleString('ar-EG')+' ج.م';
+const fmtDate = iso => { try { return new Date(iso).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}); } catch { return iso; } };
+
+function toast(msg, type='info'){
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:500;
+    background:${type==='ok'?'#065f46':type==='err'?'#7f1d1d':'#0c4a6e'};
+    color:#fff;padding:12px 20px;border-radius:12px;font-weight:800;font-size:13px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:90%;text-align:center;`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(()=>el.remove(),300); }, 2800);
+}
+
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   var target=document.getElementById('screen-'+name);
   if(target)target.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-
+  state.currentScreen=name;
   var isAuth=(name==='login'||name==='otp');
   document.getElementById('topHeader').style.display=isAuth?'none':'block';
   document.getElementById('topTabs').style.display=isAuth?'none':'flex';
   document.getElementById('bottomNav').style.display=isAuth?'none':'flex';
-
   document.querySelectorAll('.top-tabs .tab').forEach(t=>{
     t.classList.toggle('active',t.dataset.tab===name);
   });
   document.querySelectorAll('.nav-item').forEach(n=>{
     n.classList.toggle('active',n.dataset.screen===name);
   });
+}
+
+function normalizePhone(raw){
+  let p = String(raw||'').replace(/[^\d]/g,'');
+  if(/^01[0-9]{9}$/.test(p)) return '+20'+p.slice(1);
+  if(/^20[0-9]{10}$/.test(p)) return '+'+p;
+  if(p.startsWith('+')) return p;
+  return '';
+}
+
+async function sendOtp(){
+  const input = document.getElementById('otpPhoneInput');
+  const phone = normalizePhone(input?.value);
+  if(!phone){ toast('اكتب رقم صحيح مثل 01066049634','err'); return; }
+  const btn = document.querySelector('#screen-login .btn.primary');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإرسال...';
+  try{
+    LOG.info('📱 إرسال OTP إلى:', phone);
+    const r = await db.auth.signInWithOtp({
+      phone: phone,
+      options: { shouldCreateUser: false }
+    });
+    if(r.error) throw r.error;
+    LOG.ok('✅ تم إرسال OTP');
+    const el = document.getElementById('otpPhone');
+    if(el) el.textContent = phone;
+    state.pendingPhone = phone;
+    showScreen('otp');
+    setTimeout(()=>document.querySelector('.otp-cell')?.focus(), 300);
+  }catch(e){
+    LOG.err('sendOtp:', e);
+    let msg = e.message || 'فشل إرسال الرمز';
+    if(msg.includes('Signups not allowed')) msg = 'هذا الرقم غير مسجّل كفني معتمد';
+    toast(msg, 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
 }
 
 function otpInput(el){
@@ -1244,26 +1326,424 @@ function otpInput(el){
   }
 }
 
+async function verifyOtp(){
+  const cells = [...document.querySelectorAll('.otp-cell')];
+  const code = cells.map(c=>c.value).join('');
+  if(code.length!==6){ toast('اكتب الرمز كاملاً','err'); return; }
+  const btn = document.querySelector('#screen-otp .btn.primary');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري التحقق...';
+  try{
+    const phone = state.pendingPhone;
+    LOG.info('🔐 التحقق من OTP');
+    const r = await db.auth.verifyOtp({ phone, token: code, type: 'sms' });
+    if(r.error) throw r.error;
+    state.user = r.data.user;
+    LOG.ok('✅ تم الدخول:', state.user.id);
+    await claimTechAccount(phone);
+    toast('أهلاً بك 👋','ok');
+    await loadOrders();
+    showScreen('home');
+    startRealtime();
+  }catch(e){
+    LOG.err('verifyOtp:', e);
+    toast(e.message || 'رمز غير صحيح','err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+async function claimTechAccount(phone){
+  try{
+    const r = await db.rpc('claim_tech_account', { p_phone: phone });
+    if(r.error) throw r.error;
+    state.tech = r.data;
+    LOG.ok('✅ الفني:', state.tech);
+    updateHeader();
+  }catch(e){
+    LOG.err('claimTechAccount:', e);
+    toast('تعذر ربط الحساب: '+e.message,'err');
+  }
+}
+
+async function restoreSession(){
+  try{
+    const r = await db.auth.getSession();
+    if(r.data?.session?.user){
+      state.user = r.data.session.user;
+      const phone = normalizePhone(state.user.phone||'');
+      if(phone) await claimTechAccount(phone);
+      await loadOrders();
+      showScreen('home');
+      startRealtime();
+      LOG.ok('✅ جلسة مستعادة');
+    }
+  }catch(e){ LOG.warn('restoreSession:', e); }
+}
+
+async function logout(){
+  if(!confirm('خروج من حساب الفني؟')) return;
+  try{ await db.auth.signOut(); }catch(e){}
+  state.user=null; state.tech=null; state.orders={available:[],mine:[]};
+  try{ localStorage.clear(); }catch(e){}
+  showScreen('login');
+}
+
+function updateHeader(){
+  if(!state.tech) return;
+  const h1 = document.querySelector('.brand h1');
+  if(h1) h1.textContent = state.tech.name?.split(' ')[0] || 'أمازون كول';
+}
+
+async function loadOrders(){
+  if(!state.user || !state.tech) return;
+  try{
+    LOG.info('📥 تحميل الطلبات...');
+    const [availRes, mineRes] = await Promise.all([
+      db.from('orders').select('*').is('tech_phone', null).eq('status','pending').order('created_at',{ascending:false}).limit(20),
+      db.from('orders').select('*').eq('tech_phone', state.tech.phone).order('created_at',{ascending:false}).limit(30)
+    ]);
+    if(availRes.error) throw availRes.error;
+    if(mineRes.error) throw mineRes.error;
+    state.orders.available = availRes.data || [];
+    state.orders.mine = mineRes.data || [];
+    LOG.ok('✅ متاحة:', state.orders.available.length, '| طلباتي:', state.orders.mine.length);
+    renderStats();
+    renderAvailable();
+    renderMine();
+  }catch(e){
+    LOG.err('loadOrders:', e);
+    toast('تعذر تحميل الطلبات','err');
+  }
+}
+
+function renderStats(){
+  const avail = state.orders.available.length;
+  const active = state.orders.mine.filter(o=>!['done','completed','cancelled'].includes(o.status)).length;
+  const done = state.orders.mine.filter(o=>['done','completed'].includes(o.status)).length;
+  const nums = document.querySelectorAll('.stats-bar .num');
+  if(nums[0]) nums[0].textContent = avail;
+  if(nums[1]) nums[1].textContent = active;
+  if(nums[2]) nums[2].textContent = done;
+}
+
+function serviceLabel(t){
+  return {
+    installation:'تركيب تكييف', uninstall:'فك تكييف',
+    maintenance:'صيانة عامة', periodic:'صيانة دورية',
+    diagnosis:'تشخيص عطل', piping:'تأسيس مواسير',
+    cleaning:'تنظيف وغسيل', gas:'شحن غاز', store:'طلب متجر'
+  }[t] || t || 'طلب خدمة';
+}
+
+function serviceIcon(t){
+  return {
+    installation:'🔧', uninstall:'🔩', maintenance:'🧰',
+    periodic:'📅', diagnosis:'🔍', piping:'🪈',
+    cleaning:'🧼', gas:'💨', store:'🛒'
+  }[t] || '🔧';
+}
+
+function statusBadge(order){
+  const s = order.status;
+  const isUrgent = order.details?.emergency === true;
+  const badges = [];
+  if(isUrgent) badges.push('<span class="order-badge badge-urgent">🚨 طوارئ</span>');
+  if(s==='pending') badges.push('<span class="order-badge badge-pending">⏳ متاح</span>');
+  else if(s==='assigned') badges.push('<span class="order-badge badge-progress">✅ مُعيَّن</span>');
+  else if(s==='on_way') badges.push('<span class="order-badge badge-progress">🚗 في الطريق</span>');
+  else if(s==='arrived') badges.push('<span class="order-badge badge-progress">📍 وصلت</span>');
+  else if(s==='report_pending') badges.push('<span class="order-badge badge-pending">📝 بانتظار موافقة</span>');
+  else if(s==='report_approved') badges.push('<span class="order-badge badge-progress">✅ موافق</span>');
+  else if(s==='paid'||s==='done'||s==='completed') badges.push('<span class="order-badge badge-done">💵 تم الدفع</span>');
+  else if(s==='cancelled') badges.push('<span class="order-badge badge-urgent">❌ ملغي</span>');
+  return badges.join('');
+}
+
+function orderCard(order, mode='available'){
+  const d = order.details || {};
+  const id = String(order.id).slice(-8);
+  const isUrgent = d.emergency === true;
+  const cls = isUrgent ? 'urgent' : '';
+  const service = serviceLabel(order.service_type);
+  const icon = serviceIcon(order.service_type);
+  const city = d.city || '';
+  const district = d.district || '';
+  const address = district || city || 'غير محدد';
+  const phone = d.phone || '—';
+  const clientName = order.client_name || d.name || 'عميل';
+  const price = order.total_amount ? money(order.total_amount) : 'يُحدَّد بعد التقرير';
+
+  let actions = '';
+  if(mode==='available'){
+    actions = `<div class="order-actions">
+      <button class="btn primary sm" onclick="event.stopPropagation();acceptOrder('${order.id}')">✅ قبول</button>
+    </div>`;
+  } else {
+    const st = order.status;
+    if(st==='assigned') actions = `<div class="order-actions">
+      <button class="btn primary sm" onclick="event.stopPropagation();updateStatus('${order.id}','on_way')">🚗 في الطريق</button>
+      ${phone!=='—'?`<button class="btn sm" onclick="event.stopPropagation();callClient('${phone}')">📞</button>`:''}
+    </div>`;
+    else if(st==='on_way') actions = `<div class="order-actions">
+      <button class="btn primary sm" onclick="event.stopPropagation();updateStatus('${order.id}','arrived')">📍 وصلت</button>
+      ${phone!=='—'?`<button class="btn sm" onclick="event.stopPropagation();callClient('${phone}')">📞</button>`:''}
+    </div>`;
+    else if(st==='arrived') actions = `<div class="order-actions">
+      <button class="btn primary sm" onclick="event.stopPropagation();showReport('${order.id}')">📝 التقرير</button>
+    </div>`;
+    else if(st==='report_approved') actions = `<div class="order-actions">
+      <button class="btn green sm" onclick="event.stopPropagation();confirmCash('${order.id}')">💵 استلمت الكاش</button>
+    </div>`;
+  }
+
+  return `<div class="order-card ${cls}" onclick="showDetails('${order.id}')">
+    <div class="order-head">
+      <div class="order-id">
+        <b>#${id}</b>
+        ${order.created_at?fmtDate(order.created_at):''}
+      </div>
+      <div class="order-badges">${statusBadge(order)}</div>
+    </div>
+    <div class="order-service">
+      <span class="ico-small">${icon}</span>
+      ${esc(service)}${d.brand?' — '+esc(d.brand):''}${d.hp?' '+esc(d.hp)+' حصان':''}
+    </div>
+    <div class="order-meta">
+      ${mode==='available'
+        ? `<div>📍 <b>${esc(address)}</b></div>
+           ${d.bookingDate?`<div>📅 ${esc(d.bookingDate)} ${esc(d.bookingTime||'')}</div>`:''}`
+        : `<div>👤 <b>${esc(clientName)}</b> — ${esc(phone)}</div>
+           <div>📍 <b>${esc(address)}</b></div>
+           ${d.bookingDate?`<div>📅 ${esc(d.bookingDate)} ${esc(d.bookingTime||'')}</div>`:''}`}
+    </div>
+    <div class="order-price">
+      <span class="label">${order.total_amount?'الإجمالي':'السعر'}</span>
+      <span>${esc(price)}</span>
+    </div>
+    ${actions}
+  </div>`;
+}
+
+function renderAvailable(){
+  const section = document.querySelector('#screen-home .section-head:nth-of-type(2)');
+  if(!section) return;
+  let container = section.nextElementSibling;
+  while(container && !container.classList.contains('order-card')) {
+    if(container.classList.contains('empty')){ container.remove(); container = section.nextElementSibling; continue; }
+    container = container.nextElementSibling;
+  }
+  // امسح كل order-cards من home
+  document.querySelectorAll('#screen-home .order-card, #screen-home .empty').forEach(c=>c.remove());
+  // ابحث عن مكان اللصق = بعد section-head الثاني
+  const heads = document.querySelectorAll('#screen-home .section-head');
+  const target = heads[heads.length-1];
+  if(!target) return;
+
+  if(!state.orders.available.length){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.style.margin = '0 16px';
+    empty.innerHTML = `<div class="ico">📭</div><b>لا توجد طلبات متاحة الآن</b><p>سيتم إشعارك عند وصول طلب جديد</p>`;
+    target.parentNode.insertBefore(empty, target.nextSibling);
+    return;
+  }
+
+  let ref = target.nextSibling;
+  state.orders.available.forEach(o => {
+    const div = document.createElement('div');
+    div.innerHTML = orderCard(o, 'available');
+    target.parentNode.insertBefore(div.firstElementChild, ref);
+  });
+}
+
+function renderMine(){
+  document.querySelectorAll('#screen-orders .order-card, #screen-orders .empty').forEach(c=>c.remove());
+  const head = document.querySelector('#screen-orders .section-head');
+  if(!head) return;
+
+  if(!state.orders.mine.length){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.style.margin = '0 16px';
+    empty.innerHTML = `<div class="ico">📋</div><b>لا توجد طلبات مُعيَّنة</b><p>اقبل طلبًا من الصفحة الرئيسية</p>`;
+    head.parentNode.insertBefore(empty, head.nextSibling);
+    return;
+  }
+
+  let ref = head.nextSibling;
+  state.orders.mine.forEach(o => {
+    const div = document.createElement('div');
+    div.innerHTML = orderCard(o, 'mine');
+    head.parentNode.insertBefore(div.firstElementChild, ref);
+  });
+
+  const more = document.querySelector('#screen-orders .more');
+  if(more) more.textContent = state.orders.mine.length + ' طلب';
+}
+
+async function acceptOrder(orderId){
+  if(!state.tech) return;
+  if(!confirm('قبول هذا الطلب؟ ستصبح مسؤولاً عن تنفيذه.')) return;
+  try{
+    LOG.info('✅ قبول الطلب:', orderId);
+    toast('⏳ جاري قبول الطلب...');
+    const r = await db.rpc('tech_accept_order', { p_order_id: String(orderId) });
+    if(r.error) throw r.error;
+    if(!r.data) throw new Error('الطلب لم يعد متاحًا');
+    toast('✅ تم قبول الطلب','ok');
+    await loadOrders();
+    showScreen('orders');
+  }catch(e){
+    LOG.err('acceptOrder:', e);
+    toast('تعذر قبول الطلب: '+(e.message||''),'err');
+  }
+}
+
+async function updateStatus(orderId, status){
+  if(!state.tech) return;
+  try{
+    toast('⏳ جاري التحديث...');
+    const o = findOrder(orderId);
+    const timeline = [...(o?.timeline||[]), {status, at:new Date().toISOString(), by:'technician'}];
+    const r = await db.rpc('tech_update_order_status', {
+      p_order_id: String(orderId),
+      p_status: status,
+      p_timeline: timeline
+    });
+    if(r.error) throw r.error;
+    toast('✅ تم التحديث','ok');
+    await loadOrders();
+    showDetails(orderId);
+  }catch(e){
+    LOG.err('updateStatus:', e);
+    toast('تعذر التحديث','err');
+  }
+}
+
+function findOrder(id){
+  return [...state.orders.available, ...state.orders.mine].find(o=>String(o.id)===String(id));
+}
+
+function callClient(phone){ window.location.href = 'tel:'+phone; }
+
+function showDetails(orderId){
+  const o = findOrder(orderId);
+  if(!o) return;
+  const d = o.details || {};
+  const id = String(o.id).slice(-8);
+  const el = document.getElementById('screen-details');
+  el.querySelector('h2').textContent = '📋 تفاصيل الطلب #'+id;
+
+  const cards = el.querySelectorAll('.section-card');
+
+  // Hero
+  const isUrgent = d.emergency === true;
+  cards[0].style.borderColor = isUrgent ? 'rgba(239,68,68,.5)' : 'var(--border)';
+  cards[0].style.background = isUrgent ? 'linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.02))' : '';
+  cards[0].innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+    <div>
+      ${isUrgent?`<div style="font-size:11px;color:#fca5a5;font-weight:900">🚨 طوارئ — أولوية قصوى</div>`:''}
+      <div style="font-size:15px;font-weight:900;margin-top:4px">${esc(serviceLabel(o.service_type))} ${d.brand?'— '+esc(d.brand):''}</div>
+    </div>
+    ${isUrgent?`<div class="order-badge badge-urgent">+50%</div>`:''}
+  </div>`;
+
+  // Client
+  cards[1].innerHTML = `<h3>👤 بيانات العميل</h3>
+    <div class="info-row"><span class="lbl">الاسم</span><span class="val">${esc(o.client_name||d.name||'—')}</span></div>
+    <div class="info-row"><span class="lbl">الهاتف</span><span class="val" style="color:var(--cyan)">${esc(d.phone||'—')}</span></div>
+    ${d.brand?`<div class="info-row"><span class="lbl">الجهاز</span><span class="val">${esc(d.brand)} ${esc(d.model||'')}</span></div>`:''}
+    ${d.bookingDate?`<div class="info-row"><span class="lbl">الموعد</span><span class="val">${esc(d.bookingDate)} ${esc(d.bookingTime||'')}</span></div>`:''}
+  `;
+
+  // Location
+  const addr = d.address || [d.city,d.district].filter(Boolean).join(' - ');
+  cards[2].innerHTML = `<h3>📍 موقع العميل</h3>
+    <div class="map-placeholder">📍 ${esc(addr)}</div>
+    <div class="info-row"><span class="lbl">العنوان</span><span class="val">${esc(addr||'—')}</span></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      ${d.phone?`<button class="btn primary sm" style="flex:1" onclick="callClient('${d.phone}')">📞 اتصال</button>
+      <button class="btn sm" style="flex:1" onclick="window.open('https://wa.me/${(d.phone||'').replace(/^0/,'20')}','_blank')">💬 واتساب</button>`:''}
+    </div>`;
+
+  // Problem
+  cards[3].innerHTML = `<h3>🔍 وصف المشكلة</h3>
+    <div style="background:var(--bg2);padding:12px;border-radius:12px;font-size:12.5px;line-height:1.85;color:#cbd5e1">
+      ${esc(d.problem||d.notes||'لا يوجد وصف')}
+    </div>
+    ${d.errorCode?`<div class="info-row"><span class="lbl">كود العطل</span><span class="val">${esc(d.errorCode)}</span></div>`:''}
+  `;
+
+  // Actions
+  const isMine = o.tech_phone === state.tech?.phone;
+  cards[4].style.display = '';
+  if(!isMine && o.status==='pending'){
+    cards[4].innerHTML = `<h3>⚡ قبول الطلب</h3>
+      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:12px;margin-bottom:12px;font-size:11.5px;color:#fcd34d;line-height:1.75">
+        ⚠️ عند قبول الطلب، تصبح مسؤولًا عن تنفيذه في الوقت المحدد.
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary lg" style="flex:2" onclick="acceptOrder('${o.id}')">✅ قبول الطلب</button>
+        <button class="btn lg" style="flex:1" onclick="showScreen('home')">رفض</button>
+ </div>`;
+  } else if(isMine){
+    const st = o.status;
+    let btns = '';
+    if(st==='assigned') btns = `<button class="btn primary lg" style="width:100%" onclick="updateStatus('${o.id}','on_way')">🚗 بدء الرحلة</button>`;
+    else if(st==='on_way') btns = `<button class="btn primary lg" style="width:100%" onclick="updateStatus('${o.id}','arrived')">📍 وصلت</button>`;
+    else if(st==='arrived') btns = `<button class="btn primary lg" style="width:100%" onclick="showReport('${o.id}')">📝 فتح التقرير الفني</button>`;
+    else if(st==='report_pending') btns = `<div style="background:rgba(245,158,11,.1);padding:14px;border-radius:12px;text-align:center;color:#fcd34d;font-weight:800">⏳ بانتظار موافقة العميل</div>`;
+    else if(st==='report_approved') btns = `<button class="btn green lg" style="width:100%" onclick="confirmCash('${o.id}')">💵 استلمت الكاش</button>`;
+    else if(['paid','done','completed'].includes(st)) btns = `<div style="background:rgba(16,185,129,.1);padding:14px;border-radius:12px;text-align:center;color:#6ee7b7;font-weight:800">✅ مكتمل</div>`;
+    cards[4].innerHTML = `<h3>⚡ إجراءات</h3>${btns}`;
+  } else {
+    cards[4].style.display = 'none';
+  }
+
+  showScreen('details');
+}
+
 function openAvailModal(){document.getElementById('availModal').classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 
-function setAvail(type,el){
+async function setAvail(type, el){
   document.querySelectorAll('.avail-opt').forEach(o=>{o.className='avail-opt'});
   el.classList.add('active-'+type);
-
   var pill=document.querySelector('.avail-pill');
   var txt=document.getElementById('availText');
   pill.className='avail-pill';
-  if(type==='available'){txt.textContent='متاح'}
-  else if(type==='busy'){txt.textContent='مشغول';pill.classList.add('busy')}
-  else if(type==='off'){txt.textContent='خارج';pill.classList.add('off')}
+  let avail = 'available';
+  if(type==='available'){txt.textContent='متاح'; avail='available';}
+  else if(type==='busy'){txt.textContent='مشغول';pill.classList.add('busy'); avail='busy';}
+  else if(type==='off'){txt.textContent='خارج';pill.classList.add('off'); avail='offline';}
   closeModal('availModal');
+  if(state.tech){
+    try{
+      await db.from('tech_apps').update({ availability: avail }).eq('phone', state.tech.phone);
+      toast('✅ تم تحديث حالتك','ok');
+    }catch(e){ LOG.warn('setAvail:', e); }
+  }
 }
 
-function showReport(){document.getElementById('reportModal').classList.add('open')}
+function showReport(orderId){ toast('قريبًا في المرحلة 3 🚧'); }
+function confirmCash(orderId){ toast('قريبًا في المرحلة 3 🚧'); }
+function logoutPreview(){ logout(); }
 
-function logoutPreview(){
-  if(confirm('خروج من وضع المعاينة؟')){showScreen('login')}
+let realtimeChannel = null;
+function startRealtime(){
+  if(realtimeChannel) return;
+  try{
+    realtimeChannel = db.channel('tech-orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        LOG.info('🔄 تحديث');
+        loadOrders();
+      })
+      .subscribe();
+    LOG.ok('✅ Realtime مشترك');
+  }catch(e){ LOG.warn('realtime:', e); }
 }
 
 document.querySelectorAll('.modal').forEach(m=>{
@@ -1271,12 +1751,18 @@ document.querySelectorAll('.modal').forEach(m=>{
     if(e.target===m)m.classList.remove('open');
   });
 });
-
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     document.querySelectorAll('.modal').forEach(m=>m.classList.remove('open'));
   }
 });
+
+document.querySelector('#screen-login .btn.primary').onclick = sendOtp;
+document.querySelector('#screen-otp .btn.primary').onclick = verifyOtp;
+document.querySelector('#screen-otp .btn:not(.primary)').onclick = () => showScreen('login');
+
+LOG.info('🚀 Tech App ready');
+restoreSession();
 </script>
 </div>
 </body>
