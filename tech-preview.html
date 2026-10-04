@@ -1,0 +1,1283 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050b14">
+<title>أمازون كول — الفني</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050b14;--bg2:#081524;--bg3:#0a1a2e;
+  --card:#0d2138;--card2:#112a44;
+  --gold:#f6c66a;--gold2:#e8b04a;
+  --cyan:#22d3ee;--cyan2:#06b6d4;--cyan3:#0891b2;
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;
+  --text:#f1f5f9;--muted:#7e93aa;--muted2:#546b82;
+  --border:rgba(148,163,184,.12);--border2:rgba(148,163,184,.22);
+  --radius:16px;--radius-sm:11px;--radius-lg:24px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Tajawal,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;
+  background:
+    radial-gradient(700px 400px at 100% -10%,rgba(34,211,238,.10),transparent 60%),
+    radial-gradient(600px 400px at -10% 30%,rgba(246,198,106,.06),transparent 55%),
+    linear-gradient(180deg,#040912 0%,#061321 50%,#040912 100%);
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+h1,h2,h3,h4{margin:0;line-height:1.3}
+a{text-decoration:none;color:inherit}
+.app{max-width:520px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:90px}
+.preview-banner{
+  background:linear-gradient(135deg,#7c3aed,#4c1d95);
+  color:#fff;padding:8px 12px;text-align:center;
+  font-size:11px;font-weight:900;letter-spacing:.4px;
+  position:sticky;top:0;z-index:300;
+}
+.top{
+  position:sticky;top:34px;z-index:200;
+  background:rgba(5,11,20,.88);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border-bottom:1px solid var(--border);
+  padding:12px 16px;
+}
+.top-inner{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-logo{
+  width:40px;height:40px;border-radius:14px;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan3) 40%,var(--gold) 100%);
+  display:grid;place-items:center;font:900 15px Arial;color:#04121e;
+  box-shadow:0 6px 20px rgba(34,211,238,.28),inset 0 1px 0 rgba(255,255,255,.4);
+  position:relative;overflow:hidden;
+}
+.brand-logo::after{
+  content:'';position:absolute;top:-10px;right:-10px;width:40px;height:40px;
+  background:radial-gradient(circle,rgba(255,255,255,.5),transparent 70%);
+  border-radius:50%;
+}
+.brand h1{font-size:15px;font-weight:900;line-height:1;letter-spacing:-.3px}
+.brand .sub{font-size:8.5px;color:var(--muted);letter-spacing:1.5px;font-weight:900;margin-top:3px}
+.top-right{display:flex;gap:8px;align-items:center}
+.avail-pill{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);
+  color:#6ee7b7;padding:6px 10px;border-radius:999px;
+  font-size:10px;font-weight:900;cursor:pointer;
+}
+.avail-pill.busy{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:#fcd34d}
+.avail-pill.off{background:rgba(126,147,170,.12);border-color:rgba(126,147,170,.35);color:#94a3b8}
+.icon-btn{
+  width:38px;height:38px;border-radius:12px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  display:grid;place-items:center;font-size:16px;position:relative;
+}
+.icon-btn .dot{position:absolute;top:7px;left:7px;width:7px;height:7px;background:var(--red);border-radius:50%;border:2px solid var(--bg)}
+.top-tabs{
+  display:flex;gap:6px;overflow-x:auto;padding:10px 16px;
+  background:rgba(5,11,20,.6);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:98px;z-index:190;
+  scrollbar-width:none;
+}
+.top-tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:0 0 auto;padding:8px 14px;border-radius:999px;
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+  color:#cbd5e1;font-size:12px;font-weight:800;white-space:nowrap;
+  transition:all .2s;
+}
+.tab.active{
+  background:linear-gradient(135deg,var(--cyan2),var(--cyan));
+  color:#03111d;border-color:transparent;
+  box-shadow:0 6px 18px rgba(34,211,238,.25);
+}
+.tab.login-tab{
+  background:transparent;border-color:var(--gold);
+  color:var(--gold);
+}
+
+/* ========== HERO ========== */
+.hero{
+  position:relative;
+  margin:16px;
+  padding:36px 20px 44px;
+  border-radius:24px;
+  background:
+    radial-gradient(600px 300px at 50% 0%,rgba(34,211,238,.14),transparent 65%),
+    linear-gradient(180deg,#081524,#050d18);
+  border:1px solid var(--border);
+  overflow:hidden;
+  text-align:center;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:
+    repeating-linear-gradient(90deg,transparent 0,transparent 40px,rgba(148,163,184,.03) 40px,rgba(148,163,184,.03) 41px),
+    repeating-linear-gradient(0deg,transparent 0,transparent 40px,rgba(148,163,184,.03) 40px,rgba(148,163,184,.03) 41px);
+  pointer-events:none;
+  mask-image:radial-gradient(circle at center,black 30%,transparent 75%);
+  -webkit-mask-image:radial-gradient(circle at center,black 30%,transparent 75%);
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(34,211,238,.08);
+  border:1px solid rgba(34,211,238,.28);
+  color:#a5f3fc;padding:6px 12px;border-radius:999px;
+  font-size:10.5px;font-weight:800;letter-spacing:.3px;
+  margin-bottom:18px;
+  position:relative;z-index:2;
+}
+.hero-badge::before{content:'🏅';font-size:12px}
+.hero-title{
+  font-size:26px;font-weight:900;line-height:1.35;
+  letter-spacing:-.6px;margin-bottom:8px;
+  position:relative;z-index:2;
+}
+.hero-title .gold{
+  background:linear-gradient(90deg,var(--gold),#ffe9b3);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  display:inline-block;
+}
+.hero-title .cyan{
+  background:linear-gradient(90deg,var(--cyan),#a5f3fc);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  display:inline-block;
+}
+.hero-sub{
+  font-size:12.5px;color:var(--muted);line-height:1.85;
+  margin:0 auto 22px;max-width:400px;
+  position:relative;z-index:2;
+}
+.hero-actions{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  max-width:420px;margin:0 auto;
+  position:relative;z-index:2;
+}
+.hero-actions .btn{width:100%;font-size:12.5px;padding:13px 8px}
+
+/* ========== BUTTONS ========== */
+.btn{
+  border:1px solid var(--border2);background:rgba(255,255,255,.04);color:var(--text);
+  padding:12px 16px;border-radius:13px;font-size:13px;font-weight:800;
+  transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  white-space:nowrap;
+}
+.btn:hover{transform:translateY(-1px);border-color:var(--border2)}
+.btn.primary{
+  background:linear-gradient(135deg,var(--cyan2),var(--cyan));
+  border-color:transparent;color:#03111d;
+  box-shadow:0 8px 22px rgba(34,211,238,.28);
+}
+.btn.primary:hover{box-shadow:0 12px 30px rgba(34,211,238,.42)}
+.btn.gold{
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  border-color:transparent;color:#1a1207;
+  box-shadow:0 8px 22px rgba(246,198,106,.25);
+}
+.btn.green{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.4);color:#6ee7b7}
+.btn.amber{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.4);color:#fcd34d}
+.btn.red{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.4);color:#fca5a5}
+.btn.block{width:100%}
+.btn.lg{padding:14px;font-size:14px;border-radius:14px}
+.btn.sm{padding:8px 12px;font-size:11.5px;border-radius:10px}
+
+/* ========== SECTION HEAD ========== */
+.section-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:22px 16px 12px;
+}
+.section-head h2{
+  font-size:17px;font-weight:900;display:flex;align-items:center;gap:8px;
+  letter-spacing:-.3px;
+}
+.section-head .more{color:var(--muted);font-size:11px;font-weight:800}
+
+/* ========== FEATURE GRID ========== */
+.feature-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:10px;padding:0 16px 8px;
+}
+.feature{
+  background:linear-gradient(145deg,#0d2138,#0a1a2e);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:16px 10px;
+  text-align:center;
+  cursor:pointer;
+  transition:all .2s;
+  position:relative;
+  overflow:hidden;
+}
+.feature:hover{border-color:rgba(34,211,238,.4);transform:translateY(-2px)}
+.feature::after{
+  content:'';position:absolute;top:-30px;right:-30px;width:60px;height:60px;
+  background:radial-gradient(circle,rgba(34,211,238,.15),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.feature .ico{
+  width:42px;height:42px;border-radius:12px;
+  background:rgba(34,211,238,.1);
+  border:1px solid rgba(34,211,238,.22);
+  display:grid;place-items:center;font-size:19px;
+  margin:0 auto 10px;
+}
+.feature .ico.gold{background:rgba(246,198,106,.1);border-color:rgba(246,198,106,.22)}
+.feature .ico.green{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.22)}
+.feature b{display:block;font-size:12.5px;font-weight:800;margin-bottom:3px}
+.feature small{display:block;color:var(--muted);font-size:10px;font-weight:700;line-height:1.4}
+
+/* ========== STATS BAR ========== */
+.stats-bar{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:10px;padding:0 16px;margin:16px 0;
+}
+.stat-mini{
+  background:linear-gradient(145deg,var(--card),var(--bg2));
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px 8px;text-align:center;
+  position:relative;overflow:hidden;
+}
+.stat-mini::after{
+  content:'';position:absolute;top:-20px;right:-20px;width:50px;height:50px;
+  background:radial-gradient(circle,rgba(34,211,238,.12),transparent 70%);
+  border-radius:50%;
+}
+.stat-mini .num{
+  font-size:22px;font-weight:900;letter-spacing:-.5px;
+  color:var(--cyan);position:relative;
+}
+.stat-mini .num.green{color:#6ee7b7}
+.stat-mini .num.amber{color:#fcd34d}
+.stat-mini .num.gold{color:var(--gold)}
+.stat-mini .lbl{
+  font-size:9.5px;color:var(--muted);margin-top:4px;
+  font-weight:800;letter-spacing:.3px;
+}
+
+/* ========== ORDER CARD ========== */
+.order-card{
+  background:linear-gradient(145deg,var(--card),var(--bg2));
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;margin:0 16px 12px;
+  position:relative;overflow:hidden;
+  cursor:pointer;transition:all .2s;
+}
+.order-card:hover{border-color:rgba(34,211,238,.32);transform:translateY(-1px)}
+.order-card.urgent{
+  border-color:rgba(239,68,68,.4);
+  background:linear-gradient(145deg,rgba(239,68,68,.06),var(--bg2));
+}
+.order-card.urgent::before{
+  content:'';position:absolute;top:0;right:0;width:100px;height:100px;
+  background:radial-gradient(circle,rgba(239,68,68,.15),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.order-head{
+  display:flex;justify-content:space-between;
+  align-items:flex-start;gap:10px;margin-bottom:10px;
+  position:relative;z-index:2;
+}
+.order-id{font-size:10.5px;color:var(--muted);font-weight:700;line-height:1.5}
+.order-id b{font-size:14px;color:var(--text);display:block;margin-bottom:2px}
+.order-badges{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.order-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 9px;border-radius:999px;
+  font-size:9.5px;font-weight:900;
+}
+.badge-pending{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.35)}
+.badge-progress{background:rgba(34,211,238,.15);color:#a5f3fc;border:1px solid rgba(34,211,238,.35)}
+.badge-done{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.35)}
+.badge-urgent{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.5)}
+.order-service{
+  font-size:14.5px;font-weight:900;margin:8px 0 10px;
+  display:flex;align-items:center;gap:8px;
+}
+.order-service .ico-small{
+  width:32px;height:32px;border-radius:10px;
+  background:rgba(34,211,238,.1);
+  display:grid;place-items:center;font-size:15px;flex-shrink:0;
+}
+.order-meta{display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.order-meta div{display:flex;align-items:center;gap:6px}
+.order-meta b{color:#cbd5e1;font-weight:800}
+.order-price{
+  font-size:18px;font-weight:900;color:var(--gold);
+  letter-spacing:-.5px;
+  padding-top:10px;border-top:1px dashed var(--border2);
+  display:flex;justify-content:space-between;align-items:center;
+  position:relative;z-index:2;
+}
+.order-price .label{font-size:10px;color:var(--muted);font-weight:800}
+.order-price small{color:var(--amber);font-size:10.5px;font-weight:900}
+.order-actions{display:flex;gap:8px;margin-top:12px}
+.order-actions .btn{flex:1}
+
+/* ========== BOTTOM NAV ========== */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:250;
+  max-width:520px;margin:0 auto;
+  background:rgba(5,11,20,.94);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-top:1px solid var(--border);
+  display:flex;padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  gap:4px;
+}
+.nav-item{
+  flex:1;padding:9px 4px;border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--muted);font-weight:900;transition:all .2s;
+  position:relative;
+}
+.nav-item .ico{font-size:21px;line-height:1;transition:transform .2s}
+.nav-item small{font-size:9.5px;font-weight:900}
+.nav-item.active{
+  color:#a5f3fc;
+  background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(6,182,212,.08));
+}
+.nav-item.active .ico{transform:scale(1.1)}
+.nav-item .badge-dot{
+  position:absolute;top:5px;right:calc(50% - 18px);
+  width:7px;height:7px;background:var(--red);border-radius:50%;
+  border:2px solid var(--bg);
+}
+
+/* ========== SCREEN ========== */
+.screen{display:none}
+.screen.active{display:block;animation:fadeIn .25s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ========== LOGIN ========== */
+.login-wrap{
+  min-height:calc(100vh - 40px);
+  display:flex;flex-direction:column;
+  padding:24px 20px;
+}
+.login-hero{
+  text-align:center;margin-bottom:36px;margin-top:20px;
+  position:relative;
+}
+.login-hero::before{
+  content:'';position:absolute;top:20px;left:50%;transform:translateX(-50%);
+  width:200px;height:200px;
+  background:radial-gradient(circle,rgba(34,211,238,.15),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.login-hero .logo-xl{
+  width:84px;height:84px;border-radius:24px;
+  margin:0 auto 18px;position:relative;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan3) 40%,var(--gold) 100%);
+  display:grid;place-items:center;
+  font:900 34px Arial;color:#04121e;
+  box-shadow:0 16px 48px rgba(34,211,238,.35),inset 0 2px 0 rgba(255,255,255,.3);
+}
+.login-hero .logo-xl::after{
+  content:'';position:absolute;top:-20px;right:-20px;width:60px;height:60px;
+  background:radial-gradient(circle,rgba(255,255,255,.5),transparent 70%);
+  border-radius:50%;
+}
+.login-hero h1{
+  font-size:22px;font-weight:900;margin-bottom:8px;
+  letter-spacing:-.4px;
+}
+.login-hero h1 .cyan{
+  background:linear-gradient(90deg,var(--cyan),#a5f3fc);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.login-hero p{color:var(--muted);font-size:13.5px;margin:0}
+
+/* ========== FIELD ========== */
+.field{margin:14px 0}
+.field label{display:block;color:#cbd5e1;margin-bottom:8px;font-size:12.5px;font-weight:800}
+.field input,.field select,.field textarea{
+  width:100%;background:var(--bg2);color:var(--text);
+  border:1px solid var(--border2);border-radius:14px;
+  padding:14px 16px;outline:none;font-size:15px;
+  transition:border-color .15s,box-shadow .15s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--cyan);box-shadow:0 0 0 4px rgba(34,211,238,.1);
+}
+.field textarea{min-height:90px;resize:vertical;font-family:inherit}
+
+/* ========== OTP ========== */
+.otp-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:22px 0}
+.otp-cell{
+  width:100%;aspect-ratio:1/1;background:var(--bg2);
+  border:2px solid var(--border);border-radius:14px;
+  font-size:22px;font-weight:900;text-align:center;outline:none;
+  transition:border-color .2s;
+}
+.otp-cell:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(34,211,238,.12)}
+.otp-cell.filled{border-color:var(--cyan);background:rgba(34,211,238,.06)}
+
+/* ========== MODAL ========== */
+.modal{
+  position:fixed;inset:0;z-index:400;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(6px);
+  display:none;align-items:flex-end;justify-content:center;
+  animation:fadeIn .2s;
+}
+.modal.open{display:flex}
+.modal-box{
+  width:100%;max-width:520px;max-height:92vh;overflow-y:auto;
+  background:linear-gradient(180deg,#0d2138,#081524);
+  border-radius:24px 24px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+  border:1px solid var(--border);border-bottom:none;
+  animation:slideUp .3s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{
+  width:44px;height:5px;background:var(--border2);border-radius:3px;
+  margin:0 auto 16px;
+}
+.modal-title{font-size:17px;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* ========== AVAIL SWITCH ========== */
+.avail-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.avail-opt{
+  padding:14px 6px;border-radius:14px;text-align:center;
+  background:var(--bg2);border:1px solid var(--border2);
+  font-size:12px;font-weight:900;cursor:pointer;transition:all .2s;
+  line-height:1.6;
+}
+.avail-opt.active-available{background:rgba(16,185,129,.15);border-color:var(--green);color:#6ee7b7}
+.avail-opt.active-busy{background:rgba(245,158,11,.15);border-color:var(--amber);color:#fcd34d}
+.avail-opt.active-off{background:rgba(126,147,170,.15);border-color:var(--muted);color:#cbd5e1}
+
+/* ========== SECTION CARD ========== */
+.section-card{
+  background:linear-gradient(145deg,var(--card),var(--bg2));
+  border:1px solid var(--border);
+  border-radius:18px;padding:16px;margin:12px 16px;
+}
+.section-card h3{
+  font-size:13.5px;font-weight:900;margin:0 0 12px;
+  display:flex;align-items:center;gap:8px;color:#cbd5e1;
+}
+.info-row{
+  display:flex;justify-content:space-between;gap:10px;
+  padding:10px 0;border-bottom:1px solid var(--border);
+  font-size:12.5px;
+}
+.info-row:last-child{border-bottom:none}
+.info-row .lbl{color:var(--muted);font-weight:700}
+.info-row .val{font-weight:700;text-align:left}
+
+/* ========== MAP ========== */
+.map-placeholder{
+  height:170px;border-radius:14px;margin:10px 0;
+  background:
+    linear-gradient(135deg,rgba(34,211,238,.05),rgba(6,182,212,.03)),
+    repeating-linear-gradient(90deg,transparent 0,transparent 30px,rgba(148,163,184,.06) 30px,rgba(148,163,184,.06) 31px),
+    repeating-linear-gradient(0deg,transparent 0,transparent 30px,rgba(148,163,184,.06) 30px,rgba(148,163,184,.06) 31px),
+    #0a1a2e;
+  position:relative;overflow:hidden;border:1px solid var(--border);
+  display:grid;place-items:center;color:var(--muted);font-size:11px;font-weight:800;
+}
+.map-placeholder::after{
+  content:'📍';font-size:40px;position:absolute;
+  filter:drop-shadow(0 8px 16px rgba(34,211,238,.5));
+}
+
+/* ========== PHOTO UPLOAD ========== */
+.photo-upload{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;
+}
+.photo-slot{
+  aspect-ratio:1/1;border-radius:12px;
+  background:var(--bg2);border:2px dashed var(--border2);
+  display:grid;place-items:center;font-size:22px;color:var(--muted2);
+  cursor:pointer;transition:all .2s;
+}
+.photo-slot:hover{border-color:var(--cyan);color:var(--cyan)}
+.photo-slot.filled{
+  border-style:solid;border-color:var(--cyan);
+  background:linear-gradient(135deg,rgba(34,211,238,.12),rgba(6,182,212,.06));
+  color:var(--cyan);
+}
+
+/* ========== WALLET ========== */
+.wallet-hero{
+  background:
+    radial-gradient(400px 200px at 100% 0%,rgba(246,198,106,.25),transparent 60%),
+    linear-gradient(135deg,#0891b2,#06b6d4 40%,#22d3ee);
+  border-radius:22px;padding:24px;color:#03111d;
+  box-shadow:0 16px 48px rgba(34,211,238,.3);
+  margin:16px;position:relative;overflow:hidden;
+}
+.wallet-hero::before{
+  content:'';position:absolute;top:-50px;left:-50px;width:200px;height:200px;
+  background:radial-gradient(circle,rgba(255,255,255,.25),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.wallet-hero .lbl{font-size:11px;font-weight:900;letter-spacing:1.2px;opacity:.75;position:relative}
+.wallet-hero .amount{font-size:36px;font-weight:900;letter-spacing:-1.5px;margin:6px 0 4px;line-height:1;position:relative}
+.wallet-hero .sub{font-size:11.5px;font-weight:800;opacity:.7;position:relative}
+
+.wallet-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;margin-bottom:14px}
+.wallet-card{
+  background:linear-gradient(145deg,var(--card),var(--bg2));
+  border:1px solid var(--border);
+  border-radius:16px;padding:14px;
+}
+.wallet-card .lbl{font-size:10.5px;color:var(--muted);font-weight:800;margin-bottom:6px}
+.wallet-card .val{font-size:17px;font-weight:900;letter-spacing:-.5px}
+
+/* ========== PROFILE ========== */
+.profile-header{
+  text-align:center;padding:26px 16px;margin:16px;
+  background:linear-gradient(145deg,var(--card),var(--bg2));
+  border:1px solid var(--border);border-radius:22px;
+  position:relative;overflow:hidden;
+}
+.profile-header::before{
+  content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);
+  width:300px;height:200px;
+  background:radial-gradient(circle,rgba(34,211,238,.12),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.avatar{
+  width:88px;height:88px;border-radius:50%;margin:0 auto 12px;position:relative;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan3) 40%,var(--gold) 100%);
+  display:grid;place-items:center;font:900 30px Arial;color:#03111d;
+  box-shadow:0 12px 36px rgba(34,211,238,.35);
+  z-index:2;
+}
+.avatar .status-dot{
+  position:absolute;bottom:3px;left:3px;width:22px;height:22px;
+  background:var(--green);border-radius:50%;border:4px solid var(--card);
+}
+.profile-header h2{
+  font-size:20px;font-weight:900;margin-bottom:8px;
+  position:relative;z-index:2;
+}
+.profile-header .role{
+  display:inline-block;padding:5px 13px;border-radius:999px;
+  background:rgba(34,211,238,.14);color:#a5f3fc;
+  font-size:11px;font-weight:900;border:1px solid rgba(34,211,238,.3);
+  position:relative;z-index:2;
+}
+.profile-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px;
+  position:relative;z-index:2;
+}
+.profile-stat{
+  background:rgba(0,0,0,.2);padding:12px 6px;border-radius:14px;
+  border:1px solid var(--border);
+}
+.profile-stat .n{font-size:18px;font-weight:900;color:var(--gold)}
+.profile-stat .l{font-size:9.5px;color:var(--muted);font-weight:800;margin-top:3px}
+
+.menu-list{
+  background:linear-gradient(145deg,var(--card),var(--bg2));
+  border:1px solid var(--border);border-radius:18px;
+  overflow:hidden;margin:0 16px;
+}
+.menu-item{
+  display:flex;align-items:center;gap:14px;padding:15px 16px;
+  border-bottom:1px solid var(--border);cursor:pointer;
+  transition:background .15s;
+}
+.menu-item:last-child{border-bottom:none}
+.menu-item:hover{background:rgba(255,255,255,.02)}
+.menu-item .ico-box{
+  width:40px;height:40px;border-radius:12px;
+  background:rgba(34,211,238,.08);
+  border:1px solid rgba(34,211,238,.15);
+  display:grid;place-items:center;font-size:18px;flex-shrink:0;
+}
+.menu-item .txt{flex:1}
+.menu-item .txt b{display:block;font-size:13.5px;font-weight:800}
+.menu-item .txt small{display:block;color:var(--muted);font-size:10.5px;margin-top:2px}
+.menu-item .arrow{color:var(--muted);font-size:16px}
+
+/* ========== SERVICE GRID ========== */
+.service-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;
+}
+.service-card{
+  background:linear-gradient(145deg,var(--card),var(--bg2));
+  border:1px solid var(--border);border-radius:16px;
+  padding:16px;text-align:center;cursor:pointer;transition:all .2s;
+}
+.service-card:hover{border-color:rgba(34,211,238,.35);transform:translateY(-2px)}
+.service-card .ico{font-size:30px;margin-bottom:8px}
+.service-card b{display:block;font-size:13px;font-weight:800;margin-bottom:4px}
+.service-card small{display:block;color:var(--muted);font-size:10px;line-height:1.5}
+
+</style>
+</head>
+<body>
+<div class="preview-banner">🎨 معاينة التصميم — نفس أسلوب CodePen</div>
+
+<div class="app">
+
+  <!-- ========== TOP HEADER ========== -->
+  <header class="top" id="topHeader" style="display:none">
+    <div class="top-inner">
+      <div class="brand">
+        <div class="brand-logo">🔧</div>
+        <div>
+          <h1>أمازون كول</h1>
+          <div class="sub">TECH PANEL</div>
+        </div>
+      </div>
+      <div class="top-right">
+        <div class="avail-pill" onclick="openAvailModal()">
+          <span>●</span>
+          <span id="availText">متاح</span>
+        </div>
+        <button class="icon-btn" onclick="showScreen('profile')">
+          🔔
+          <span class="dot"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== TOP TABS ========== -->
+  <nav class="top-tabs" id="topTabs" style="display:none">
+    <button class="tab active" data-tab="home" onclick="showScreen('home')">الرئيسية</button>
+    <button class="tab" data-tab="orders" onclick="showScreen('orders')">طلباتي</button>
+    <button class="tab" data-tab="services" onclick="showScreen('services')">الخدمات</button>
+    <button class="tab" data-tab="wallet" onclick="showScreen('wallet')">المحفظة</button>
+    <button class="tab login-tab" onclick="logoutPreview()">خروج</button>
+  </nav>
+
+  <!-- ========== SCREEN: LOGIN ========== -->
+  <div id="screen-login" class="screen active">
+    <div class="login-wrap">
+      <div class="login-hero">
+        <div class="logo-xl">🔧</div>
+        <h1>أمازون <span class="cyan">كول</span> — الفني</h1>
+        <p>سجّل دخولك لبدء استقبال الطلبات</p>
+      </div>
+      <div class="field">
+        <label>رقم الموبايل</label>
+        <input type="tel" placeholder="01xxxxxxxxx" value="01066049634">
+      </div>
+      <button class="btn primary block lg" onclick="showScreen('otp')">📱 إرسال رمز التحقق</button>
+      <div style="text-align:center;margin-top:20px;color:var(--muted);font-size:11.5px;line-height:1.8">
+        بالدخول، أنت توافق على<br>
+        <a style="color:var(--cyan);font-weight:800">شروط الاستخدام وسياسة الخصوصية</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SCREEN: OTP ========== -->
+  <div id="screen-otp" class="screen">
+    <div class="login-wrap">
+      <div class="login-hero">
+        <div class="logo-xl">🔐</div>
+        <h1>رمز التحقق</h1>
+        <p>أرسلنا رمزًا مكوّنًا من 6 أرقام إلى<br><b style="color:var(--cyan)">01066049634</b></p>
+      </div>
+      <div class="otp-row">
+        <input class="otp-cell" maxlength="1" inputmode="numeric" oninput="otpInput(this)">
+        <input class="otp-cell" maxlength="1" inputmode="numeric" oninput="otpInput(this)">
+        <input class="otp-cell" maxlength="1" inputmode="numeric" oninput="otpInput(this)">
+        <input class="otp-cell" maxlength="1" inputmode="numeric" oninput="otpInput(this)">
+        <input class="otp-cell" maxlength="1" inputmode="numeric" oninput="otpInput(this)">
+        <input class="otp-cell" maxlength="1" inputmode="numeric" oninput="otpInput(this)">
+      </div>
+      <button class="btn primary block lg" onclick="showScreen('home')">✅ دخول</button>
+      <button class="btn block" style="margin-top:10px" onclick="showScreen('login')">⬅️ تغيير الرقم</button>
+      <div style="text-align:center;margin-top:20px;color:var(--muted);font-size:11.5px">
+        لم يصلك الرمز؟ <a style="color:var(--cyan);font-weight:800">إعادة الإرسال</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SCREEN: HOME ========== -->
+  <div id="screen-home" class="screen">
+
+    <section class="hero">
+      <div class="hero-badge">دليل الفنيين المعتمدين — أمازون كول</div>
+      <h1 class="hero-title">
+        ابدأ يومك مع<br>
+        <span class="gold">طلبات قريبة منك</span><br>
+        <span class="cyan" style="font-size:20px">ودخل ثابت ومضمون</span>
+      </h1>
+      <p class="hero-sub">
+        استقبل الطلبات، سجّل تقاريرك، وتابع أرباحك — كل ذلك في تطبيق واحد مصمم للفنيين المحترفين.
+      </p>
+      <div class="hero-actions">
+        <button class="btn gold" onclick="showScreen('orders')">📋 طلباتي النشطة</button>
+        <button class="btn primary" onclick="showScreen('services')">🔧 ابدأ العمل</button>
+      </div>
+    </section>
+
+    <div class="stats-bar">
+      <div class="stat-mini"><div class="num">3</div><div class="lbl">متاحة الآن</div></div>
+      <div class="stat-mini"><div class="num amber">1</div><div class="lbl">نشطة</div></div>
+      <div class="stat-mini"><div class="num green">12</div><div class="lbl">مكتملة</div></div>
+    </div>
+
+    <div class="section-head">
+      <h2>⚡ إجراءات سريعة</h2>
+      <span class="more">كل شيء بضغطة</span>
+    </div>
+    <div class="feature-grid">
+      <div class="feature" onclick="showScreen('orders')">
+        <div class="ico">📋</div>
+        <b>طلباتي</b>
+        <small>النشطة والمكتملة</small>
+      </div>
+      <div class="feature" onclick="openAvailModal()">
+        <div class="ico green">🟢</div>
+        <b>حالتي</b>
+        <small>متاح / مشغول</small>
+      </div>
+      <div class="feature" onclick="showScreen('wallet')">
+        <div class="ico gold">💰</div>
+        <b>المحفظة</b>
+        <small>الأرباح والمستحقات</small>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>📍 طلبات قريبة منك</h2>
+      <span class="more">تحديث تلقائي</span>
+    </div>
+
+    <div class="order-card urgent" onclick="showScreen('details')">
+      <div class="order-head">
+        <div class="order-id">
+          <b>#A7B2C</b>
+          قبل 3 دقائق
+        </div>
+        <div class="order-badges">
+          <span class="order-badge badge-urgent">🚨 طوارئ</span>
+          <span class="order-badge badge-pending">⏳ متاح</span>
+        </div>
+      </div>
+      <div class="order-service">
+        <span class="ico-small">🔧</span>
+        تركيب تكييف — Carrier 1.5
+      </div>
+      <div class="order-meta">
+        <div>📍 <b>سيدي بشر — شارع خالد بن الوليد</b></div>
+        <div>🚗 <b>1.2 كم</b> — 4 دقائق</div>
+        <div>📅 النهاردة 4:00 - 6:00 م</div>
+      </div>
+      <div class="order-price">
+        <span class="label">السعر المتوقع</span>
+        <span>400 ج.م <small>+ طوارئ 50%</small></span>
+      </div>
+    </div>
+
+    <div class="order-card" onclick="showScreen('details')">
+      <div class="order-head">
+        <div class="order-id">
+          <b>#D9F3E</b>
+          قبل 12 دقيقة
+        </div>
+        <span class="order-badge badge-pending">⏳ متاح</span>
+      </div>
+      <div class="order-service">
+        <span class="ico-small">🪈</span>
+        تأسيس مواسير — 3 وحدات
+      </div>
+      <div class="order-meta">
+        <div>📍 <b>العجمي — الهانوفيل</b></div>
+        <div>🚗 <b>3.4 كم</b> — 9 دقائق</div>
+        <div>📅 بكرة 10:00 - 12:00 ص</div>
+      </div>
+      <div class="order-price">
+        <span class="label">السعر المتوقع</span>
+        <span>1,850 ج.م</span>
+      </div>
+    </div>
+
+    <div class="order-card" onclick="showScreen('details')">
+      <div class="order-head">
+        <div class="order-id">
+          <b>#B4K8Q</b>
+          قبل 25 دقيقة
+        </div>
+        <span class="order-badge badge-pending">⏳ متاح</span>
+      </div>
+      <div class="order-service">
+        <span class="ico-small">💨</span>
+        شحن غاز — LG 2.25
+      </div>
+      <div class="order-meta">
+        <div>📍 <b>سموحة — شارع فوزي معاذ</b></div>
+        <div>🚗 <b>5.1 كم</b> — 13 دقيقة</div>
+        <div>📅 النهاردة 6:00 - 9:00 م</div>
+      </div>
+      <div class="order-price">
+        <span class="label">السعر المتوقع</span>
+        <span>300 ج.م</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========== SCREEN: ORDERS ========== -->
+  <div id="screen-orders" class="screen">
+    <div class="section-head" style="padding-top:16px">
+      <h2>📋 طلباتي النشطة</h2>
+      <span class="more">3 طلبات</span>
+    </div>
+
+    <div class="order-card" onclick="showScreen('details')">
+      <div class="order-head">
+        <div class="order-id">
+          <b>#X2Y5Z</b>
+          بدأت 20 دقيقة
+        </div>
+        <span class="order-badge badge-progress">🚗 في الطريق</span>
+      </div>
+      <div class="order-service">
+        <span class="ico-small">🧰</span>
+        صيانة عامة — Sharp Plasma
+      </div>
+      <div class="order-meta">
+        <div>👤 <b>محمد أحمد</b> — 01012345678</div>
+        <div>📍 <b>محرم بك — شارع شكور</b></div>
+        <div>📅 اليوم 3:00 - 5:00 م</div>
+      </div>
+      <div class="order-actions">
+        <button class="btn primary sm" onclick="event.stopPropagation();showScreen('details')">📍 وصلت</button>
+        <button class="btn sm">📞 اتصال</button>
+      </div>
+    </div>
+
+    <div class="order-card" onclick="showScreen('details')">
+      <div class="order-head">
+        <div class="order-id">
+          <b>#M9P3L</b>
+          بدأت ساعة
+        </div>
+        <span class="order-badge badge-progress">📍 وصلت</span>
+      </div>
+      <div class="order-service">
+        <span class="ico-small">🧼</span>
+        تنظيف وغسيل — Gree 1.5
+      </div>
+      <div class="order-meta">
+        <div>👤 <b>سارة محمود</b> — 01111122222</div>
+        <div>📍 <b>سيدي جابر — طريق الحرية</b></div>
+      </div>
+      <div class="order-actions">
+        <button class="btn primary sm" onclick="event.stopPropagation();showReport()">📝 التقرير الفني</button>
+        <button class="btn sm">📞 اتصال</button>
+      </div>
+    </div>
+
+    <div class="order-card" onclick="showScreen('details')">
+      <div class="order-head">
+        <div class="order-id">
+          <b>#R7T1V</b>
+          منتظر دفع
+        </div>
+        <span class="order-badge badge-done">✅ العمالة تمت</span>
+      </div>
+      <div class="order-service">
+        <span class="ico-small">🔧</span>
+        تركيب تكييف — Fresh Turbo
+      </div>
+      <div class="order-meta">
+        <div>👤 <b>أحمد علي</b> — 01234567890</div>
+        <div>📍 <b>المنتزه — شارع الجيش</b></div>
+      </div>
+      <div class="order-price">
+        <span class="label">المطلوب</span>
+        <span>450 ج.م</span>
+      </div>
+      <div class="order-actions">
+        <button class="btn green sm" onclick="event.stopPropagation();alert('تم تأكيد الدفع ✅')">💵 استلمت الكاش</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SCREEN: SERVICES ========== -->
+  <div id="screen-services" class="screen">
+    <section class="hero" style="padding:28px 20px">
+      <div class="hero-badge">اختر نوع الخدمة</div>
+      <h1 class="hero-title" style="font-size:22px">
+        خدمات <span class="cyan">أمازون كول</span><br>
+        <span class="gold" style="font-size:16px">لجميع احتياجات التكييف</span>
+      </h1>
+      <p class="hero-sub" style="font-size:12px">
+        اختر الخدمة التي ترغب في تقديمها وابدأ باستقبال الطلبات
+      </p>
+    </section>
+
+    <div class="service-grid">
+      <div class="service-card" onclick="showScreen('home')">
+        <div class="ico">🔧</div>
+        <b>تركيب تكييف</b>
+        <small>تركيب وتشغيل وضبط</small>
+      </div>
+      <div class="service-card" onclick="showScreen('home')">
+        <div class="ico">🪈</div>
+        <b>تأسيس مواسير</b>
+        <small>نحاس وعزل وتصريف</small>
+      </div>
+      <div class="service-card" onclick="showScreen('home')">
+        <div class="ico">🧰</div>
+        <b>صيانة عامة</b>
+        <small>كشف وإصلاح أعطال</small>
+      </div>
+      <div class="service-card" onclick="showScreen('home')">
+        <div class="ico">🧼</div>
+        <b>تنظيف وغسيل</b>
+        <small>تنظيف داخلي وخارجي</small>
+      </div>
+      <div class="service-card" onclick="showScreen('home')">
+        <div class="ico">💨</div>
+        <b>شحن غاز</b>
+        <small>فحص تسريب ثم شحن</small>
+      </div>
+      <div class="service-card" onclick="showScreen('home')">
+        <div class="ico">🔍</div>
+        <b>تشخيص عطل</b>
+        <small>فحص وقياسات وتقرير</small>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+  </div>
+
+  <!-- ========== SCREEN: DETAILS ========== -->
+  <div id="screen-details" class="screen">
+    <div class="section-head" style="padding-top:16px">
+      <h2>📋 تفاصيل الطلب #A7B2C</h2>
+    </div>
+
+    <div class="section-card" style="border-color:rgba(239,68,68,.5);background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.02))">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:11px;color:#fca5a5;font-weight:900">🚨 طوارئ — أولوية قصوى</div>
+          <div style="font-size:15px;font-weight:900;margin-top:4px">تركيب تكييف — Carrier 1.5</div>
+        </div>
+        <div class="order-badge badge-urgent">+50%</div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h3>👤 بيانات العميل</h3>
+      <div class="info-row"><span class="lbl">الاسم</span><span class="val">أحمد محمد علي</span></div>
+      <div class="info-row"><span class="lbl">الهاتف</span><span class="val" style="color:var(--cyan)">01012345678</span></div>
+      <div class="info-row"><span class="lbl">الجهاز</span><span class="val">Carrier Optimax 1.5</span></div>
+      <div class="info-row"><span class="lbl">الموعد</span><span class="val">النهاردة 4:00 - 6:00 م</span></div>
+    </div>
+
+    <div class="section-card">
+      <h3>📍 موقع العميل</h3>
+      <div class="map-placeholder">1.2 كم منك</div>
+      <div class="info-row"><span class="lbl">العنوان</span><span class="val">سيدي بشر — عمارة 15</span></div>
+      <div class="info-row"><span class="lbl">علامة</span><span class="val">جنب مسجد النور</span></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn primary sm" style="flex:1">🗺️ الخريطة</button>
+        <button class="btn sm" style="flex:1">📞 اتصال</button>
+        <button class="btn sm" style="flex:1">💬 واتساب</button>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h3>🔍 وصف المشكلة</h3>
+      <div style="background:var(--bg2);padding:12px;border-radius:12px;font-size:12.5px;line-height:1.85;color:#cbd5e1">
+        التكييف شغال بس مش بيبرد كويس، والفلتر شكله محتاج تنظيف. كود E1 ظهر مرتين.
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h3>⚡ قبول الطلب</h3>
+      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:12px;margin-bottom:12px;font-size:11.5px;color:#fcd34d;line-height:1.75">
+        ⚠️ عند قبول الطلب، تصبح مسؤولًا عن تنفيذه في الوقت المحدد.
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary lg" style="flex:2" onclick="showScreen('home')">✅ قبول الطلب</button>
+        <button class="btn lg" style="flex:1" onclick="showScreen('home')">رفض</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SCREEN: WALLET ========== -->
+  <div id="screen-wallet" class="screen">
+    <div class="wallet-hero">
+      <div class="lbl">رصيدك الحالي</div>
+      <div class="amount">3,825 ج.م</div>
+      <div class="sub">آخر تحديث: اليوم 2:30 م</div>
+    </div>
+
+    <div class="wallet-grid">
+      <div class="wallet-card">
+        <div class="lbl">إجمالي الأرباح</div>
+        <div class="val" style="color:#6ee7b7">4,500 ج.م</div>
+      </div>
+      <div class="wallet-card">
+        <div class="lbl">عمولة الشركة (15%)</div>
+        <div class="val" style="color:#fcd34d">675 ج.م</div>
+      </div>
+      <div class="wallet-card">
+        <div class="lbl">الخصومات</div>
+        <div class="val" style="color:#fca5a5">0 ج.م</div>
+      </div>
+      <div class="wallet-card">
+        <div class="lbl">طلبات مكتملة</div>
+        <div class="val">12</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>💸 آخر العمليات</h2>
+    </div>
+    <div class="section-card">
+      <div class="info-row">
+        <div>
+          <div style="font-weight:800">طلب #R7T1V</div>
+          <div style="color:var(--muted);font-size:11px">اليوم 2:30 م</div>
+        </div>
+        <div style="color:#6ee7b7;font-weight:900">+382.5 ج.م</div>
+      </div>
+      <div class="info-row">
+        <div>
+          <div style="font-weight:800">طلب #M9P3L</div>
+          <div style="color:var(--muted);font-size:11px">اليوم 12:15 م</div>
+        </div>
+        <div style="color:#6ee7b7;font-weight:900">+127.5 ج.م</div>
+      </div>
+      <div class="info-row">
+        <div>
+          <div style="font-weight:800">طلب #X2Y5Z</div>
+          <div style="color:var(--muted);font-size:11px">أمس 5:40 م</div>
+        </div>
+        <div style="color:#6ee7b7;font-weight:900">+255 ج.م</div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+  </div>
+
+  <!-- ========== SCREEN: PROFILE ========== -->
+  <div id="screen-profile" class="screen">
+    <div class="profile-header">
+      <div class="avatar">
+        إ.س
+        <span class="status-dot"></span>
+      </div>
+      <h2>إسماعيل صلاح</h2>
+      <div class="role">🔧 فني معتمد</div>
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="n">12</div><div class="l">مكتملة</div></div>
+        <div class="profile-stat"><div class="n" style="color:#6ee7b7">4.8</div><div class="l">التقييم</div></div>
+        <div class="profile-stat"><div class="n" style="color:#a5f3fc">3</div><div class="l">سنوات</div></div>
+      </div>
+    </div>
+
+    <div class="menu-list">
+      <div class="menu-item" onclick="openAvailModal()">
+        <div class="ico-box">🟢</div>
+        <div class="txt"><b>حالة التوفر</b><small>متاح لاستقبال الطلبات</small></div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="menu-item">
+        <div class="ico-box">📍</div>
+        <div class="txt"><b>مشاركة موقعي</b><small>لعرضك للعملاء القريبين</small></div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="menu-item">
+        <div class="ico-box">🔔</div>
+        <div class="txt"><b>الإشعارات</b><small>تنبيهات الطلبات والتقارير</small></div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="menu-item">
+        <div class="ico-box">📊</div>
+        <div class="txt"><b>إحصائياتي</b><small>أدائي وأرباحي خلال الشهر</small></div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="menu-item">
+        <div class="ico-box">📞</div>
+        <div class="txt"><b>اتصل بالإدارة</b><small>دعم فني 24/7</small></div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="menu-item" onclick="logoutPreview()">
+        <div class="ico-box" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.2)">🚪</div>
+        <div class="txt"><b style="color:#fca5a5">تسجيل الخروج</b><small>خروج من حساب الفني</small></div>
+        <div class="arrow">›</div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+  </div>
+
+  <!-- ========== BOTTOM NAV ========== -->
+  <nav id="bottomNav" class="bottom-nav" style="display:none">
+    <button class="nav-item active" onclick="showScreen('home')" data-screen="home">
+      <span class="ico">🏠</span>
+      <small>الرئيسية</small>
+      <span class="badge-dot"></span>
+    </button>
+    <button class="nav-item" onclick="showScreen('orders')" data-screen="orders">
+      <span class="ico">📋</span>
+      <small>طلباتي</small>
+    </button>
+    <button class="nav-item" onclick="showScreen('services')" data-screen="services">
+      <span class="ico">🔧</span>
+      <small>الخدمات</small>
+    </button>
+    <button class="nav-item" onclick="showScreen('wallet')" data-screen="wallet">
+      <span class="ico">💰</span>
+      <small>المحفظة</small>
+    </button>
+    <button class="nav-item" onclick="showScreen('profile')" data-screen="profile">
+      <span class="ico">👤</span>
+      <small>حسابي</small>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ========== AVAILABILITY MODAL ========== -->
+<div class="modal" id="availModal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🟢 حالة التوفر</div>
+    <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px">اختر حالتك الحالية ليتم عرضك للعملاء</p>
+
+    <div class="avail-switch">
+      <div class="avail-opt active-available" onclick="setAvail('available',this)">
+        🟢<br>متاح
+      </div>
+      <div class="avail-opt" onclick="setAvail('busy',this)">
+        🟡<br>مشغول
+      </div>
+      <div class="avail-opt" onclick="setAvail('off',this)">
+        ⚪<br>خارج
+      </div>
+    </div>
+
+    <button class="btn block" onclick="closeModal('availModal')" style="margin-top:16px">إغلاق</button>
+  </div>
+</div>
+
+<!-- ========== REPORT MODAL ========== -->
+<div class="modal" id="reportModal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📝 التقرير الفني</div>
+
+    <div class="field">
+      <label>التشخيص <span style="color:#ef4444">*</span></label>
+      <textarea placeholder="اكتب العطل بالتفصيل..."></textarea>
+    </div>
+
+    <div class="field">
+      <label>الإصلاح الذي تم <span style="color:#ef4444">*</span></label>
+      <textarea placeholder="ما تم إصلاحه أو تنفيذه..."></textarea>
+    </div>
+
+    <div class="field">
+      <label>القطع المستخدمة</label>
+      <textarea placeholder="اسم القطعة — الكمية — ملاحظات"></textarea>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field">
+        <label>تكلفة العمالة (ج.م)</label>
+        <input type="number" value="0">
+      </div>
+      <div class="field">
+        <label>تكلفة القطع (ج.م)</label>
+        <input type="number" value="0">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>📸 صور التنفيذ</label>
+      <div class="photo-upload">
+        <div class="photo-slot filled">📷</div>
+        <div class="photo-slot">+</div>
+        <div class="photo-slot">+</div>
+      </div>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(34,211,238,.12),rgba(6,182,212,.08));border:1px solid rgba(34,211,238,.3);border-radius:16px;padding:16px;margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;color:#cbd5e1;font-weight:800">الإجمالي</span>
+      <span style="font-size:24px;font-weight:900;color:#a5f3fc;letter-spacing:-.5px">0 ج.م</span>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn" style="flex:1" onclick="closeModal('reportModal')">إلغاء</button>
+      <button class="btn primary" style="flex:2" onclick="alert('تم إرسال التقرير للعميل ✅');closeModal('reportModal')">💾 حفظ وإرسال</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  var target=document.getElementById('screen-'+name);
+  if(target)target.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  var isAuth=(name==='login'||name==='otp');
+  document.getElementById('topHeader').style.display=isAuth?'none':'block';
+  document.getElementById('topTabs').style.display=isAuth?'none':'flex';
+  document.getElementById('bottomNav').style.display=isAuth?'none':'flex';
+
+  document.querySelectorAll('.top-tabs .tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.tab===name);
+  });
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.classList.toggle('active',n.dataset.screen===name);
+  });
+}
+
+function otpInput(el){
+  if(el.value){
+    el.classList.add('filled');
+    var next=el.nextElementSibling;
+    if(next&&next.classList.contains('otp-cell'))next.focus();
+  }
+}
+
+function openAvailModal(){document.getElementById('availModal').classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+function setAvail(type,el){
+  document.querySelectorAll('.avail-opt').forEach(o=>{o.className='avail-opt'});
+  el.classList.add('active-'+type);
+
+  var pill=document.querySelector('.avail-pill');
+  var txt=document.getElementById('availText');
+  pill.className='avail-pill';
+  if(type==='available'){txt.textContent='متاح'}
+  else if(type==='busy'){txt.textContent='مشغول';pill.classList.add('busy')}
+  else if(type==='off'){txt.textContent='خارج';pill.classList.add('off')}
+  closeModal('availModal');
+}
+
+function showReport(){document.getElementById('reportModal').classList.add('open')}
+
+function logoutPreview(){
+  if(confirm('خروج من وضع المعاينة؟')){showScreen('login')}
+}
+
+document.querySelectorAll('.modal').forEach(m=>{
+  m.addEventListener('click',function(e){
+    if(e.target===m)m.classList.remove('open');
+  });
+});
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    document.querySelectorAll('.modal').forEach(m=>m.classList.remove('open'));
+  }
+});
+</script>
+</div>
+</body>
+</html>
