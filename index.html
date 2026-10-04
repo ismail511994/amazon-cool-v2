@@ -8163,5 +8163,104 @@ if(window.AmazonCoolRedesign && typeof window.AmazonCoolRedesign.refresh==='func
 </script>
 
 <!-- FIX #16/#17: database security SQL is supplied separately with this release. -->
+  <style id="ac-single-nav">
+/* ============================================================
+   AMAZON COOL — Single Vertical Nav (Right Side)
+   - Hide bottom nav completely
+   - Move top nav to right side as vertical sidebar
+   ============================================================ */
+
+/* 1) إخفاء Bottom Nav */
+.ac-bottom-nav{display:none!important}
+
+/* 2) الشريط الجانبي الثابت على اليمين */
+#nav{
+  position:fixed!important;
+  top:50%!important;
+  right:0!important;
+  left:auto!important;
+  transform:translateY(-50%)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:6px!important;
+  width:84px!important;
+  max-height:84vh!important;
+  padding:12px 8px!important;
+  margin:0!important;
+  background:rgba(6,17,29,.94)!important;
+  backdrop-filter:blur(20px)!important;
+  -webkit-backdrop-filter:blur(20px)!important;
+  border:1px solid rgba(148,163,184,.18)!important;
+  border-right:none!important;
+  border-radius:18px 0 0 18px!important;
+  box-shadow:-10px 0 30px rgba(0,0,0,.4)!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  z-index:1400!important;
+  scrollbar-width:thin!important;
+}
+#nav::-webkit-scrollbar{width:4px}
+#nav::-webkit-scrollbar-thumb{background:rgba(148,163,184,.3);border-radius:4px}
+
+#nav button{
+  flex:0 0 auto!important;
+  width:100%!important;
+  min-height:56px!important;
+  padding:6px 4px!important;
+  font-size:10px!important;
+  line-height:1.25!important;
+  font-weight:700!important;
+  border-radius:12px!important;
+  white-space:normal!important;
+  word-break:break-word!important;
+  text-align:center!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow-wrap:break-word!important;
+}
+
+#nav button.active{
+  background:linear-gradient(135deg,var(--acx-primary2),var(--acx-primary))!important;
+  color:#03111d!important;
+  border-color:transparent!important;
+}
+
+/* 3) إضافة مساحة يمنى للرأس والمحتوى */
+.top{padding-right:96px!important}
+.app{padding-right:96px!important}
+#app{padding-right:0!important}
+
+/* 4) للشاشات الصغيرة */
+@media (max-width:480px){
+  #nav{width:68px!important;padding:8px 5px!important;gap:4px!important}
+  #nav button{min-height:46px!important;font-size:9px!important;padding:4px 3px!important}
+  .top{padding-right:78px!important}
+  .app{padding-right:78px!important}
+}
+</style>
+
+<script>
+/* Move #nav out of <header> so position:fixed works against viewport */
+(function(){
+  'use strict';
+  function moveNav(){
+    var nav=document.getElementById('nav');
+    if(!nav)return;
+    if(nav.parentNode&&nav.parentNode.tagName==='HEADER'){
+      document.body.appendChild(nav);
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',moveNav);
+  else moveNav();
+  /* re-apply after any re-render (in case something re-inserted it) */
+  var _r=window.render;
+  if(typeof _r==='function'&&!_r.__acSingleNav){
+    window.render=function(){var v=_r.apply(this,arguments);setTimeout(moveNav,0);return v};
+    window.render.__acSingleNav=true;
+  }
+})();
+</script>
 </body>
 </html>
