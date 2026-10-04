@@ -19,7 +19,23 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<style>
+<style id="ac-critical-layout">
+/* 1) اخفِ Bottom Nav فورًا */
+.ac-bottom-nav,#acBottomNav{display:none!important}
+.sos-wrap,#sosWrap{display:none!important}
+.app{max-width:100%!important;padding:0!important}
+.top{position:sticky!important;top:0!important;margin:0!important;padding:14px 16px!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;width:100%!important;box-sizing:border-box!important;border-bottom:1px solid rgba(148,163,184,.18)!important}
+#app{padding:14px 100px 110px 14px!important;box-sizing:border-box!important}
+#nav{position:fixed!important;top:110px!important;bottom:16px!important;right:0!important;left:auto!important;transform:none!important;height:auto!important;max-height:none!important;width:84px!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:6px!important;padding:12px 8px!important;margin:0!important;background:rgba(6,17,29,.94)!important;backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;border:1px solid rgba(148,163,184,.18)!important;border-right:none!important;border-radius:18px 0 0 18px!important;box-shadow:-10px 0 30px rgba(0,0,0,.4)!important;overflow-x:hidden!important;overflow-y:auto!important;z-index:1400!important}
+#nav button{flex:0 0 auto!important;width:100%!important;min-height:56px!important;padding:6px 4px!important;font-size:10px!important;line-height:1.25!important;font-weight:700!important;border-radius:12px!important;white-space:normal!important;word-break:break-word!important;text-align:center!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow-wrap:break-word!important}
+@media (max-width:480px){
+.top{padding:12px 14px!important}
+#app{padding:12px 82px 110px 12px!important}
+#nav{top:98px!important;bottom:12px!important;width:68px!important;padding:8px 5px!important;gap:4px!important}
+#nav button{min-height:46px!important;font-size:9px!important;padding:4px 3px!important}
+}
+     </style>
+  <style>
 /* ========== RESET & VARIABLES ========== */
 :root{
   --bg:#090d16;--bg2:#0b1220;--card:#151d2a;--card2:#1a2330;
