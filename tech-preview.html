@@ -1071,6 +1071,58 @@ a{text-decoration:none;color:inherit}
     </div>
   </div>
 </div>
+
+<!-- ========== SCREEN: GOVERNORATE ========== -->
+<div id="screen-governorate" class="screen">
+  <div class="login-wrap">
+    <div class="login-hero" style="margin-bottom:24px">
+      <div class="logo-xl">📍</div>
+      <h1>اختر <span class="cyan">محافظتك</span></h1>
+      <p>هنعرضلك الطلبات في محافظتك بس</p>
+    </div>
+
+    <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.3);border-radius:14px;padding:14px;margin-bottom:20px;font-size:12.5px;color:#a5f3fc;line-height:1.85">
+      <b>ℹ️ مهم</b><br>
+      هنعرضلك الطلبات المتاحة في محافظتك فقط. لو عايز تغيّرها بعدين، تقدر من الملف الشخصي.
+    </div>
+
+    <div class="field">
+      <label>المحافظة</label>
+      <select id="governorateSelect" style="width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;font-size:15px">
+        <option value="">— اختر —</option>
+        <option value="الإسكندرية">الإسكندرية</option>
+        <option value="القاهرة">القاهرة</option>
+        <option value="الجيزة">الجيزة</option>
+        <option value="القليوبية">القليوبية</option>
+        <option value="الدقهلية">الدقهلية</option>
+        <option value="الشرقية">الشرقية</option>
+        <option value="الغربية">الغربية</option>
+        <option value="المنوفية">المنوفية</option>
+        <option value="البحيرة">البحيرة</option>
+        <option value="كفر الشيخ">كفر الشيخ</option>
+        <option value="دمياط">دمياط</option>
+        <option value="بورسعيد">بورسعيد</option>
+        <option value="الإسماعيلية">الإسماعيلية</option>
+        <option value="السويس">السويس</option>
+        <option value="شمال سيناء">شمال سيناء</option>
+        <option value="جنوب سيناء">جنوب سيناء</option>
+        <option value="الفيوم">الفيوم</option>
+        <option value="بني سويف">بني سويف</option>
+        <option value="المنيا">المنيا</option>
+        <option value="أسيوط">أسيوط</option>
+        <option value="سوهاج">سوهاج</option>
+        <option value="قنا">قنا</option>
+        <option value="الأقصر">الأقصر</option>
+        <option value="أسوان">أسوان</option>
+        <option value="البحر الأحمر">البحر الأحمر</option>
+        <option value="الوادي الجديد">الوادي الجديد</option>
+        <option value="مطروح">مطروح</option>
+      </select>
+    </div>
+
+    <button class="btn primary block lg" onclick="saveGovernorate()">✅ حفظ ومتابعة</button>
+  </div>
+</div>
   
   <!-- ========== SCREEN: PROFILE ========== -->
   <div id="screen-profile" class="screen">
@@ -1086,9 +1138,15 @@ a{text-decoration:none;color:inherit}
         <div class="profile-stat"><div class="n" style="color:#6ee7b7">4.8</div><div class="l">التقييم</div></div>
         <div class="profile-stat"><div class="n" style="color:#a5f3fc">3</div><div class="l">سنوات</div></div>
       </div>
+      
     </div>
-
     <div class="menu-list">
+    <div class="menu-item" onclick="changeGovernorate()">
+    <div class="ico-box">📍</div>
+    <div class="txt"><b>محافظتي</b><small id="profileGov">—</small></div>
+    <div class="arrow">›</div>
+    </div>
+  
       <div class="menu-item" onclick="openAvailModal()">
         <div class="ico-box">🟢</div>
         <div class="txt"><b>حالة التوفر</b><small>متاح لاستقبال الطلبات</small></div>
@@ -1394,6 +1452,8 @@ async function verifyOtp(){
     // نجح التحقق — احفظ بيانات الفني
     state.tech = r.data.tech;
     LOG.ok('✅ الفني:', state.tech.name);
+    const govRes = await db.from('tech_apps').select('governorate').eq('phone', state.tech.phone).maybeSingle();
+state.tech.governorate = govRes.data?.governorate || null;
 
     // احفظ الجلسة في localStorage (30 يوم)
     const session = {
@@ -1409,10 +1469,14 @@ async function verifyOtp(){
     toast('أهلاً بك ' + state.tech.name + ' 👋','ok');
 
     // حمّل الطلبات
-    await loadOrders();
-    updateHeader();
-    showScreen('home');
-    startRealtime();
+    if(!state.tech.governorate){
+  showScreen('governorate');
+} else {
+  await loadOrders();
+  updateHeader();
+  showScreen('home');
+  startRealtime();
+  }
 
   }catch(e){
     LOG.err('verifyOtp:', e);
@@ -1463,14 +1527,19 @@ try{
     state.tech.credit_limit = w.data.credit_limit;
     state.tech.wallet_balance = w.data.wallet_balance;
     state.tech.wallet_frozen = w.data.wallet_frozen;
+    state.tech.governorate = w.data.governorate || null;
   }
 }catch(e){ LOG.warn('refresh wallet:', e); }
 
-await loadOrders();
-updateHeader();
-showScreen('home');
-startRealtime();
-
+if(!state.tech.governorate){
+  showScreen('governorate');
+} else {
+  await loadOrders();
+  updateHeader();
+  showScreen('home');
+  startRealtime();
+}
+  
   }catch(e){
     LOG.warn('restoreSession:', e);
     localStorage.removeItem('ac_tech_session');
@@ -1493,6 +1562,8 @@ function updateHeader(){
   if(!state.tech) return;
   const h1 = document.querySelector('.brand h1');
   if(h1) h1.textContent = state.tech.name?.split(' ')[0] || 'أمازون كول';
+  const govEl = document.getElementById('profileGov');
+if(govEl) govEl.textContent = state.tech.governorate || 'اختر محافظة';
 }
   // ============= WALLET =============
 async function loadWallet(){
@@ -1595,7 +1666,7 @@ async function loadOrders(){
   try{
     LOG.info('📥 تحميل الطلبات...');
     const [availRes, mineRes] = await Promise.all([
-      db.from('orders').select('*').is('tech_phone', null).eq('status','pending').neq('service_type','store').order('created_at',{ascending:false}).limit(20),
+      db.from('orders').select('*').is('tech_phone', null).eq('status','pending').neq('service_type','store').eq('details->>city', state.tech.governorate).order('created_at',{ascending:false}).limit(20),
       db.from('orders').select('*').eq('tech_phone', state.tech.phone).neq('service_type','store').order('created_at',{ascending:false}).limit(30)
     ]);
     if(availRes.error) throw availRes.error;
@@ -1990,6 +2061,45 @@ async function submitCallMeBotKey(){
     btn.disabled = false;
     btn.textContent = orig;
   }
+}
+
+async function saveGovernorate(){
+  const sel = document.getElementById('governorateSelect');
+  const gov = sel?.value;
+  if(!gov){ toast('اختر محافظتك','err'); return; }
+  const btn = document.querySelector('#screen-governorate .btn.primary');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ...';
+  try{
+    const r = await db.rpc('tech_set_governorate', { p_phone: state.tech.phone, p_governorate: gov });
+    if(r.error) throw r.error;
+    if(!r.data?.success) throw new Error('فشل الحفظ');
+    state.tech.governorate = gov;
+    const saved = localStorage.getItem('ac_tech_session');
+    if(saved){
+      const s = JSON.parse(saved);
+      s.tech.governorate = gov;
+      localStorage.setItem('ac_tech_session', JSON.stringify(s));
+    }
+    toast('تم حفظ محافظتك: ' + gov, 'ok');
+    await loadOrders();
+    updateHeader();
+    showScreen('home');
+    startRealtime();
+  }catch(e){
+    LOG.err('saveGovernorate:', e);
+    toast('تعذر الحفظ: ' + (e.message||''), 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+function changeGovernorate(){
+  const sel = document.getElementById('governorateSelect');
+  if(sel && state.tech?.governorate) sel.value = state.tech.governorate;
+  showScreen('governorate');
 }
   
 function showReport(orderId){ toast('قريبًا في المرحلة 3 🚧'); }
