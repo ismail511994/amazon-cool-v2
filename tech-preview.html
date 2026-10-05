@@ -1061,7 +1061,67 @@ a{text-decoration:none;color:inherit}
 
     <div style="height:16px"></div>
   </div>
+<!-- ========== SCREEN: CALLMEBOT SETUP ========== -->
+<div id="screen-setup" class="screen">
+  <div class="login-wrap">
+    <div class="login-hero" style="margin-bottom:24px">
+      <div class="logo-xl">💬</div>
+      <h1>تفعيل <span class="cyan">WhatsApp</span></h1>
+      <p>لإرسال كود التحقق على واتساب</p>
+    </div>
 
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:14px;padding:14px;margin-bottom:20px;font-size:12.5px;color:#fcd34d;line-height:1.85">
+      <b>⚠️ هذه الخطوة تُتم مرة واحدة فقط</b><br>
+      لإرسال الكود على واتساب، نحتاج تصريح CallMeBot.
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px">
+      <h3 style="font-size:14px;font-weight:900;margin:0 0 12px;display:flex;align-items:center;gap:8px">
+        <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--cyan3));display:grid;place-items:center;font-size:12px;color:#03111d;font-weight:900">1</span>
+        احفظ الرقم في جهات الاتصال
+      </h3>
+      <div style="background:var(--bg2);padding:12px;border-radius:10px;text-align:center;font-size:14px;font-weight:900;color:var(--cyan);letter-spacing:1px;direction:ltr">
+        +34 644 99 26 98
+      </div>
+      <button class="btn block" style="margin-top:10px" onclick="copyCallMeBotNumber()">📋 نسخ الرقم</button>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px">
+      <h3 style="font-size:14px;font-weight:900;margin:0 0 12px;display:flex;align-items:center;gap:8px">
+        <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--cyan3));display:grid;place-items:center;font-size:12px;color:#03111d;font-weight:900">2</span>
+        أرسل هذه الرسالة على واتساب
+      </h3>
+      <div style="background:var(--bg2);padding:12px;border-radius:10px;text-align:center;font-size:12px;color:#cbd5e1;line-height:1.7;direction:ltr">
+        I allow callmebot to send me messages
+      </div>
+      <button class="btn block" style="margin-top:10px" onclick="copyCallMeBotMessage()">📋 نسخ الرسالة</button>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px">
+      <h3 style="font-size:14px;font-weight:900;margin:0 0 12px;display:flex;align-items:center;gap:8px">
+        <span style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--cyan3));display:grid;place-items:center;font-size:12px;color:#03111d;font-weight:900">3</span>
+        انتظر الرد واستلم المفتاح
+      </h3>
+      <p style="font-size:11.5px;color:var(--muted);margin:0 0 12px;line-height:1.75">
+        ستصلك رسالة فيها <b style="color:var(--cyan)">APIKEY</b> خلال 1-2 دقيقة.<br>
+        الصقها في الحقل أدناه:
+      </p>
+
+      <div class="field">
+        <label>CallMeBot API Key</label>
+        <input id="callmebotApiKeyInput" type="text" placeholder="مثال: 5573673" inputmode="numeric" style="text-align:center;letter-spacing:2px;font-weight:900">
+      </div>
+    </div>
+
+    <button class="btn primary block lg" onclick="submitCallMeBotKey()">✅ تفعيل وحفظ المفتاح</button>
+    <button class="btn block" style="margin-top:10px" onclick="showScreen('login')">⬅️ رجوع</button>
+
+    <div style="text-align:center;margin-top:20px;color:var(--muted);font-size:11.5px;line-height:1.7">
+      بعد التفعيل، كل مرة تسجّل دخول ستصلك كلمة التحقق على واتساب.
+    </div>
+  </div>
+</div>
+  
   <!-- ========== SCREEN: PROFILE ========== -->
   <div id="screen-profile" class="screen">
     <div class="profile-header">
@@ -1288,36 +1348,62 @@ function normalizePhone(raw){
 
 async function sendOtp(){
   const input = document.getElementById('otpPhoneInput');
-  const phone = normalizePhone(input?.value);
-  if(!phone){ toast('اكتب رقم صحيح مثل 01066049634','err'); return; }
+  const raw = (input?.value||'').trim();
+  if(!raw || raw.length < 10){ toast('اكتب رقم صحيح مثل 01066049634','err'); return; }
+
+  // تحويل الرقم إلى صيغة موحّدة محلية (010XXXXXXXX)
+  let localPhone = raw.replace(/[^\d]/g,'');
+  if(localPhone.startsWith('20')) localPhone = '0' + localPhone.slice(2);
+  if(!localPhone.startsWith('0')) localPhone = '0' + localPhone;
+
   const btn = document.querySelector('#screen-login .btn.primary');
   const orig = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ جاري الإرسال...';
+
   try{
-    LOG.info('📱 إرسال OTP إلى:', phone);
-    const r = await db.auth.signInWithOtp({
-      phone: phone,
-      options: { shouldCreateUser: false }
+    LOG.info('📱 إرسال OTP إلى:', localPhone);
+
+    const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/tech-send-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON_KEY,
+        'apikey': CONFIG.SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ phone: localPhone })
     });
-    if(r.error) throw r.error;
-    LOG.ok('✅ تم إرسال OTP');
+
+    const data = await r.json();
+    LOG.info('📬 Response:', data);
+
+    if(!data.success){
+      if(data.needs_setup){
+        // الفني لم يفعّل CallMeBot
+        state.pendingPhone = localPhone;
+        toast('⚠️ هذا الرقم لم يُفعّل WhatsApp بعد','warn');
+        showSetupCallMeBot(localPhone);
+        return;
+      }
+      throw new Error(data.message || 'فشل الإرسال');
+    }
+
+    LOG.ok('✅ تم إرسال OTP على WhatsApp');
+    state.pendingPhone = localPhone;
     const el = document.getElementById('otpPhone');
-    if(el) el.textContent = phone;
-    state.pendingPhone = phone;
+    if(el) el.textContent = localPhone;
+    toast('📱 وصلك كود على WhatsApp','ok');
     showScreen('otp');
     setTimeout(()=>document.querySelector('.otp-cell')?.focus(), 300);
+
   }catch(e){
     LOG.err('sendOtp:', e);
-    let msg = e.message || 'فشل إرسال الرمز';
-    if(msg.includes('Signups not allowed')) msg = 'هذا الرقم غير مسجّل كفني معتمد';
-    toast(msg, 'err');
+    toast(e.message || 'فشل إرسال الرمز','err');
   }finally{
     btn.disabled = false;
     btn.textContent = orig;
   }
 }
-
 function otpInput(el){
   if(el.value){
     el.classList.add('filled');
@@ -1329,26 +1415,57 @@ function otpInput(el){
 async function verifyOtp(){
   const cells = [...document.querySelectorAll('.otp-cell')];
   const code = cells.map(c=>c.value).join('');
-  if(code.length!==6){ toast('اكتب الرمز كاملاً','err'); return; }
+  if(code.length!==6){ toast('اكتب الرمز كاملاً (6 أرقام)','err'); return; }
+
   const btn = document.querySelector('#screen-otp .btn.primary');
   const orig = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ جاري التحقق...';
+
   try{
     const phone = state.pendingPhone;
-    LOG.info('🔐 التحقق من OTP');
-    const r = await db.auth.verifyOtp({ phone, token: code, type: 'sms' });
+    LOG.info('🔐 التحقق من OTP عبر RPC');
+
+    const r = await db.rpc('otp_verify', {
+      p_phone: phone,
+      p_code: code
+    });
+
     if(r.error) throw r.error;
-    state.user = r.data.user;
-    LOG.ok('✅ تم الدخول:', state.user.id);
-    await claimTechAccount(phone);
-    toast('أهلاً بك 👋','ok');
+    LOG.info('📬 RPC Response:', r.data);
+
+    if(!r.data?.success){
+      throw new Error(r.data?.message || 'كود غير صحيح');
+    }
+
+    // نجح التحقق — احفظ بيانات الفني
+    state.tech = r.data.tech;
+    LOG.ok('✅ الفني:', state.tech.name);
+
+    // احفظ الجلسة في localStorage (30 يوم)
+    const session = {
+      tech: state.tech,
+      logged_in_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 30*24*60*60*1000).toISOString()
+    };
+    localStorage.setItem('ac_tech_session', JSON.stringify(session));
+
+    // امسح كود OTP
+    cells.forEach(c => { c.value = ''; c.classList.remove('filled'); });
+
+    toast('أهلاً بك ' + state.tech.name + ' 👋','ok');
+
+    // حمّل الطلبات
     await loadOrders();
+    updateHeader();
     showScreen('home');
     startRealtime();
+
   }catch(e){
     LOG.err('verifyOtp:', e);
-    toast(e.message || 'رمز غير صحيح','err');
+    toast(e.message || 'كود غير صحيح','err');
+    const last = cells[5];
+    if(last){ last.value = ''; last.classList.remove('filled'); last.focus(); }
   }finally{
     btn.disabled = false;
     btn.textContent = orig;
@@ -1370,25 +1487,42 @@ async function claimTechAccount(phone){
 
 async function restoreSession(){
   try{
-    const r = await db.auth.getSession();
-    if(r.data?.session?.user){
-      state.user = r.data.session.user;
-      const phone = normalizePhone(state.user.phone||'');
-      if(phone) await claimTechAccount(phone);
-      await loadOrders();
-      showScreen('home');
-      startRealtime();
-      LOG.ok('✅ جلسة مستعادة');
+    const saved = localStorage.getItem('ac_tech_session');
+    if(!saved) return;
+
+    const session = JSON.parse(saved);
+
+    // تحقق من انتهاء الجلسة
+    if(new Date(session.expires_at) < new Date()){
+      localStorage.removeItem('ac_tech_session');
+      LOG.info('⏰ الجلسة منتهية');
+      return;
     }
-  }catch(e){ LOG.warn('restoreSession:', e); }
+
+    state.tech = session.tech;
+    LOG.ok('✅ جلسة مستعادة:', state.tech.name);
+
+    await loadOrders();
+    updateHeader();
+    showScreen('home');
+    startRealtime();
+
+  }catch(e){
+    LOG.warn('restoreSession:', e);
+    localStorage.removeItem('ac_tech_session');
+  }
 }
 
 async function logout(){
   if(!confirm('خروج من حساب الفني؟')) return;
   try{ await db.auth.signOut(); }catch(e){}
-  state.user=null; state.tech=null; state.orders={available:[],mine:[]};
-  try{ localStorage.clear(); }catch(e){}
+  try{ localStorage.removeItem('ac_tech_session'); }catch(e){}
+  state.user = null;
+  state.tech = null;
+  state.orders = { available: [], mine: [] };
+  if(realtimeChannel){ try{ db.removeChannel(realtimeChannel); }catch(e){} realtimeChannel = null; }
   showScreen('login');
+  toast('تم تسجيل الخروج','info');
 }
 
 function updateHeader(){
@@ -1728,6 +1862,77 @@ async function setAvail(type, el){
   }
 }
 
+ // ============= CALLMEBOT SETUP =============
+function showSetupCallMeBot(phone){
+  state.pendingPhone = phone;
+  const el = document.getElementById('setupPhone');
+  if(el) el.textContent = phone;
+  showScreen('setup');
+  setTimeout(()=>document.getElementById('callmebotApiKeyInput')?.focus(), 300);
+}
+
+function copyCallMeBotNumber(){
+  const num = '+34644992698';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(num).then(()=>toast('📋 تم نسخ الرقم','ok')).catch(()=>{
+      prompt('انسخ الرقم يدويًا:', num);
+    });
+  }else{
+    prompt('انسخ الرقم يدويًا:', num);
+  }
+}
+
+function copyCallMeBotMessage(){
+  const msg = 'I allow callmebot to send me messages';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(msg).then(()=>toast('📋 تم نسخ الرسالة','ok')).catch(()=>{
+      prompt('انسخ الرسالة يدويًا:', msg);
+    });
+  }else{
+    prompt('انسخ الرسالة يدويًا:', msg);
+  }
+}
+
+async function submitCallMeBotKey(){
+  const input = document.getElementById('callmebotApiKeyInput');
+  const key = (input?.value||'').trim();
+  if(!key || key.length < 4){ toast('اكتب API Key صحيح','err'); return; }
+
+  const btn = document.querySelector('#screen-setup .btn.primary');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ...';
+
+  try{
+    const phone = state.pendingPhone;
+    LOG.info('💾 حفظ API Key للفني:', phone);
+
+    const r = await db.rpc('tech_save_callmebot_key', {
+      p_phone: phone,
+      p_apikey: key
+    });
+
+    if(r.error) throw r.error;
+    LOG.info('📬 RPC:', r.data);
+
+    if(!r.data?.success){
+      throw new Error(r.data?.message || 'فشل الحفظ');
+    }
+
+    toast('✅ تم الحفظ! جاري إرسال الكود...','ok');
+
+    await new Promise(resolve => setTimeout(resolve, 800));
+    await sendOtp();
+
+  }catch(e){
+    LOG.err('submitCallMeBotKey:', e);
+    toast(e.message || 'فشل حفظ المفتاح','err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+  
 function showReport(orderId){ toast('قريبًا في المرحلة 3 🚧'); }
 function confirmCash(orderId){ toast('قريبًا في المرحلة 3 🚧'); }
 function logoutPreview(){ logout(); }
