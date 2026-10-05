@@ -8523,5 +8523,164 @@ if(window.AmazonCoolRedesign && typeof window.AmazonCoolRedesign.refresh==='func
   window.navItems.__acProfileAdded=true;
 })();
   </script>
+     <style id="ac-final-redesign">
+/* ============ FINAL REDESIGN: Bottom Nav Only ============ */
+
+/* 1. أخفي الشريط الجانبي */
+#nav{display:none!important}
+
+/* 2. اجعل التطبيق بعرض الشاشة كامل */
+.app{max-width:100%!important;padding:0 0 110px 0!important}
+.top{padding:14px 16px!important;margin:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important}
+#app{padding:14px 14px 110px 14px!important}
+
+/* 3. أظهر Bottom Nav */
+.ac-bottom-nav{
+  display:flex!important;
+  position:fixed!important;
+  left:8px!important;right:8px!important;
+  bottom:max(8px,env(safe-area-inset-bottom))!important;
+  z-index:1400!important;
+  padding:8px!important;gap:4px!important;
+  background:rgba(5,16,28,.94)!important;
+  backdrop-filter:blur(22px)!important;
+  -webkit-backdrop-filter:blur(22px)!important;
+  border:1px solid rgba(148,163,184,.2)!important;
+  border-radius:22px!important;
+  box-shadow:0 16px 45px rgba(0,0,0,.45)!important;
+  max-width:560px!important;margin:0 auto!important;
+}
+.ac-bottom-nav button{
+  flex:1!important;min-width:0!important;
+  border:0!important;background:transparent!important;
+  color:#8095aa!important;border-radius:14px!important;
+  padding:8px 4px!important;font-weight:800!important;
+  display:flex!important;flex-direction:column!important;
+  align-items:center!important;gap:3px!important;
+  cursor:pointer!important;transition:all .2s!important;
+}
+.ac-bottom-nav button span{font-size:20px!important;line-height:1!important}
+.ac-bottom-nav button small{font-size:9.5px!important;font-weight:900!important}
+.ac-bottom-nav button.active{
+  color:#fff!important;
+  background:linear-gradient(135deg,rgba(47,125,246,.28),rgba(22,199,232,.22))!important;
+  box-shadow:inset 0 0 0 1px rgba(22,199,232,.18)!important;
+}
+
+/* 4. أظهر زر SOS العائم */
+.sos-wrap{display:flex!important;bottom:100px!important;z-index:1300!important}
+
+/* 5. تعديل الجوال */
+@media (max-width:480px){
+  #app{padding:10px 10px 110px 10px!important}
+  .ac-bottom-nav button span{font-size:19px!important}
+  .ac-bottom-nav button small{font-size:9px!important}
+}
+     </style>
+     <script id="ac-final-nav">
+(function(){
+  'use strict';
+
+  /* 1. تحديث أزرار Bottom Nav */
+  window.navItems = function(){
+    var items = [
+      ['home', '🏠 الرئيسية'],
+      ['store', '🛒 المتجر'],
+      ['orders', '📋 طلباتي'],
+      ['cart', '🛍️ السلة (' + cartCount() + ')'],
+      ['profile', '👤 حسابي']
+    ];
+    if (typeof isAdmin === 'function' && isAdmin()) {
+      items.push(['admin', '⚙️ الإدارة']);
+    }
+    return items;
+  };
+
+  /* 2. صفحة "حسابي" الشاملة */
+  if (window.pages) {
+    window.pages.profile = function(){
+      if (!state.user) {
+        return '<h2>👤 حسابي</h2>' +
+          '<div class="card" style="text-align:center;padding:34px 20px">' +
+            '<div style="font-size:54px;margin-bottom:12px">🔐</div>' +
+            '<h3 style="margin-bottom:8px">تسجيل الدخول مطلوب</h3>' +
+            '<p class="muted" style="margin:0 0 16px">سجّل الدخول لعرض بيانات حسابك.</p>' +
+            '<button class="btn primary" onclick="openAuth()">🔐 تسجيل الدخول</button>' +
+          '</div>';
+      }
+      var p = state.profile || {};
+      var email = state.user.email || '';
+      return '<h2>👤 حسابي</h2>' +
+        '<div class="card">' +
+          '<div class="row between" style="align-items:flex-start">' +
+            '<div><div class="muted-sm">الاسم</div><h3>' + esc(p.full_name || 'عميل أمازون كول') + '</h3></div>' +
+            '<span class="pill blue">' + esc(state.role || 'client') + '</span>' +
+          '</div>' +
+          '<div class="field"><label>البريد الإلكتروني</label><input value="' + esc(email) + '" readonly></div>' +
+          '<div class="field"><label>رقم الهاتف</label><input value="' + esc(p.phone || '') + '" readonly placeholder="غير مسجل"></div>' +
+          (p.loyalty_points ? '<div class="notice ok">🎁 نقاط الولاء: <b>' + Number(p.loyalty_points) + '</b></div>' : '') +
+        '</div>' +
+
+        '<div class="card">' +
+          '<h3 style="margin-bottom:12px">🔧 الخدمات</h3>' +
+          '<div class="grid">' +
+            '<button class="btn" onclick="setPage(\'services\')">🔧 طلب خدمة</button>' +
+            '<button class="btn" onclick="setPage(\'diagnosis\')">🤖 التشخيص</button>' +
+            '<button class="btn" onclick="setPage(\'calculators\')">🧮 الحاسبات</button>' +
+            '<button class="btn" onclick="setPage(\'subscriptions\')">🛡️ الاشتراكات</button>' +
+            '<button class="btn" onclick="setPage(\'ads\')">📢 الإعلانات</button>' +
+            '<button class="btn" onclick="setPage(\'orders\')">📋 طلباتي</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<h3 style="margin-bottom:12px">🛍️ التسوق</h3>' +
+          '<div class="grid">' +
+            '<button class="btn" onclick="setPage(\'cart\')">🛍️ السلة (' + cartCount() + ')</button>' +
+            '<button class="btn" onclick="setPage(\'wishlist\')">❤️ المفضلة</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<h3 style="margin-bottom:12px">👷 الفنيين</h3>' +
+          '<div class="grid">' +
+            '<button class="btn" onclick="setPage(\'tech_dashboard\')">👷 لوحة الفني</button>' +
+            '<button class="btn green" onclick="setPage(\'tech_join\')">➕ انضم للفريق</button>' +
+          '</div>' +
+        '</div>' +
+
+        (typeof isAdmin === 'function' && isAdmin()
+          ? '<div class="card" style="border-color:#f59e0b">' +
+              '<h3 style="margin-bottom:12px;color:#fbbf24">⚙️ الإدارة</h3>' +
+              '<div class="grid">' +
+                '<button class="btn amber" onclick="setPage(\'admin\')">⚙️ لوحة الإدارة</button>' +
+                '<button class="btn" onclick="setPage(\'prosuite\')">⚙️ Pro Suite</button>' +
+              '</div>' +
+            '</div>'
+          : '') +
+
+        '<div class="card" style="border-color:#7f1d1d">' +
+          '<button class="btn red block" onclick="logout()">🚪 تسجيل الخروج</button>' +
+        '</div>';
+    };
+  }
+
+  /* 3. تحديث Bottom Nav بعد كل render */
+  var _origRender = window.render;
+  if (typeof _origRender === 'function' && !_origRender.__acFinalNav) {
+    window.render = function(){
+      var r = _origRender.apply(this, arguments);
+      setTimeout(function(){
+        if (window.AmazonCoolRedesign && typeof window.AmazonCoolRedesign.refresh === 'function') {
+          window.AmazonCoolRedesign.refresh();
+        }
+      }, 0);
+      return r;
+    };
+    window.render.__acFinalNav = true;
+  }
+})();
+           </script>
+     
 </body>
 </html>
