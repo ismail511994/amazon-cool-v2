@@ -1591,7 +1591,7 @@ function requestRecharge(){
   toast('📤 تم فتح واتساب لإرسال الطلب','ok');
 }
 async function loadOrders(){
-  if(!state.user || !state.tech) return;
+  if(!state.tech) return;
   try{
     LOG.info('📥 تحميل الطلبات...');
     const [availRes, mineRes] = await Promise.all([
