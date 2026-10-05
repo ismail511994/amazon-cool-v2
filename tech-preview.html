@@ -1595,8 +1595,8 @@ async function loadOrders(){
   try{
     LOG.info('📥 تحميل الطلبات...');
     const [availRes, mineRes] = await Promise.all([
-      db.from('orders').select('*').is('tech_phone', null).eq('status','pending').order('created_at',{ascending:false}).limit(20),
-      db.from('orders').select('*').eq('tech_phone', state.tech.phone).order('created_at',{ascending:false}).limit(30)
+      db.from('orders').select('*').is('tech_phone', null).eq('status','pending').neq('service_type','store').order('created_at',{ascending:false}).limit(20),
+      db.from('orders').select('*').eq('tech_phone', state.tech.phone).neq('service_type','store').order('created_at',{ascending:false}).limit(30)
     ]);
     if(availRes.error) throw availRes.error;
     if(mineRes.error) throw mineRes.error;
