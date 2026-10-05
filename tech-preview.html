@@ -1005,62 +1005,12 @@ a{text-decoration:none;color:inherit}
     </div>
   </div>
 
-  <!-- ========== SCREEN: WALLET ========== -->
-  <div id="screen-wallet" class="screen">
-    <div class="wallet-hero">
-      <div class="lbl">رصيدك الحالي</div>
-      <div class="amount">3,825 ج.م</div>
-      <div class="sub">آخر تحديث: اليوم 2:30 م</div>
-    </div>
-
-    <div class="wallet-grid">
-      <div class="wallet-card">
-        <div class="lbl">إجمالي الأرباح</div>
-        <div class="val" style="color:#6ee7b7">4,500 ج.م</div>
-      </div>
-      <div class="wallet-card">
-        <div class="lbl">عمولة الشركة (15%)</div>
-        <div class="val" style="color:#fcd34d">675 ج.م</div>
-      </div>
-      <div class="wallet-card">
-        <div class="lbl">الخصومات</div>
-        <div class="val" style="color:#fca5a5">0 ج.م</div>
-      </div>
-      <div class="wallet-card">
-        <div class="lbl">طلبات مكتملة</div>
-        <div class="val">12</div>
-      </div>
-    </div>
-
-    <div class="section-head">
-      <h2>💸 آخر العمليات</h2>
-    </div>
-    <div class="section-card">
-      <div class="info-row">
-        <div>
-          <div style="font-weight:800">طلب #R7T1V</div>
-          <div style="color:var(--muted);font-size:11px">اليوم 2:30 م</div>
-        </div>
-        <div style="color:#6ee7b7;font-weight:900">+382.5 ج.م</div>
-      </div>
-      <div class="info-row">
-        <div>
-          <div style="font-weight:800">طلب #M9P3L</div>
-          <div style="color:var(--muted);font-size:11px">اليوم 12:15 م</div>
-        </div>
-        <div style="color:#6ee7b7;font-weight:900">+127.5 ج.م</div>
-      </div>
-      <div class="info-row">
-        <div>
-          <div style="font-weight:800">طلب #X2Y5Z</div>
-          <div style="color:var(--muted);font-size:11px">أمس 5:40 م</div>
-        </div>
-        <div style="color:#6ee7b7;font-weight:900">+255 ج.م</div>
-      </div>
-    </div>
-
-    <div style="height:16px"></div>
+<!-- ========== SCREEN: WALLET ========== -->
+<div id="screen-wallet" class="screen">
+  <div id="walletContent">
+    <div class="notice info" style="text-align:center;padding:30px;margin:16px">⏳ جاري تحميل المحفظة...</div>
   </div>
+</div>
 <!-- ========== SCREEN: CALLMEBOT SETUP ========== -->
 <div id="screen-setup" class="screen">
   <div class="login-wrap">
@@ -1333,9 +1283,12 @@ function showScreen(name){
   document.querySelectorAll('.top-tabs .tab').forEach(t=>{
     t.classList.toggle('active',t.dataset.tab===name);
   });
-  document.querySelectorAll('.nav-item').forEach(n=>{
+    document.querySelectorAll('.nav-item').forEach(n=>{
     n.classList.toggle('active',n.dataset.screen===name);
   });
+
+  // عند الانتقال لشاشة المحفظة، حمّل البيانات
+  if(name==='wallet' && state.tech) setTimeout(loadWallet, 100);
 }
 
 function normalizePhone(raw){
@@ -1500,12 +1453,23 @@ async function restoreSession(){
     }
 
     state.tech = session.tech;
-    LOG.ok('✅ جلسة مستعادة:', state.tech.name);
+LOG.ok('✅ جلسة مستعادة:', state.tech.name);
 
-    await loadOrders();
-    updateHeader();
-    showScreen('home');
-    startRealtime();
+// حدّث بيانات الفني من السيرفر (للحصول على الرصيد الحالي)
+try{
+  const w = await db.rpc('tech_wallet_summary', { p_tech_phone: state.tech.phone });
+  if(w.data?.success){
+    state.tech.credit_balance = w.data.credit_balance;
+    state.tech.credit_limit = w.data.credit_limit;
+    state.tech.wallet_balance = w.data.wallet_balance;
+    state.tech.wallet_frozen = w.data.wallet_frozen;
+  }
+}catch(e){ LOG.warn('refresh wallet:', e); }
+
+await loadOrders();
+updateHeader();
+showScreen('home');
+startRealtime();
 
   }catch(e){
     LOG.warn('restoreSession:', e);
@@ -1530,7 +1494,102 @@ function updateHeader(){
   const h1 = document.querySelector('.brand h1');
   if(h1) h1.textContent = state.tech.name?.split(' ')[0] || 'أمازون كول';
 }
+  // ============= WALLET =============
+async function loadWallet(){
+  if(!state.tech) return;
 
+  const container = document.getElementById('walletContent');
+  if(!container) return;
+
+  container.innerHTML = '<div class="notice info" style="text-align:center;padding:30px">⏳ جاري تحميل المحفظة...</div>';
+
+  try{
+    LOG.info('💰 تحميل المحفظة...');
+    const r = await db.rpc('tech_wallet_summary', {
+      p_tech_phone: state.tech.phone
+    });
+
+    if(r.error) throw r.error;
+    if(!r.data?.success){
+      container.innerHTML = '<div class="notice err">تعذر تحميل المحفظة</div>';
+      return;
+    }
+
+    renderWallet(r.data);
+
+  }catch(e){
+    LOG.err('loadWallet:', e);
+    container.innerHTML = '<div class="notice err">خطأ: ' + esc(e.message) + '</div>';
+  }
+}
+
+  function renderWallet(w){
+  const container = document.getElementById('walletContent');
+  if(!container) return;
+
+  const balance = Number(w.credit_balance || 0);
+  const limit = Number(w.credit_limit || 200);
+  const isLow = balance < limit;
+  const isNegative = balance < 0;
+
+  let statusColor = '#6ee7b7';
+  let statusText = '✅ رصيدك جيد';
+  if(isNegative){
+    statusColor = '#fca5a5';
+    statusText = '🚫 رصيدك سالب — سدّد لتستقبل طلبات جديدة';
+  } else if(isLow){
+    statusColor = '#fcd34d';
+    statusText = '⚠️ رصيدك منخفض — يُنصح بالسداد';
+  }
+
+  const recent = Array.isArray(w.recent_transactions) ? w.recent_transactions : [];
+  const recentHtml = recent.length ? recent.map(tx=>{
+    const isCash = tx.payment_method === 'cash';
+    const method = isCash ? '💵 كاش' : '💳 فيزا';
+    const date = tx.created_at ? new Date(tx.created_at).toLocaleDateString('ar-EG',{month:'short',day:'numeric'}) : '';
+    return '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px">' +
+      '<div><div style="font-weight:800">#' + String(tx.id).slice(-6) + ' — ' + method + '</div>' +
+      '<div class="muted-sm">' + date + '</div></div>' +
+      '<div style="text-align:left"><div style="color:#6ee7b7;font-weight:900">+' + Number(tx.tech_share||0).toLocaleString('ar-EG') + ' ج</div>' +
+      '<div class="muted-sm">عمولة: ' + Number(tx.commission_amount||0).toLocaleString('ar-EG') + ' ج</div></div></div>';
+  }).join('') : '<div class="muted-sm" style="text-align:center;padding:20px">لا توجد عمليات بعد</div>';
+
+  container.innerHTML =
+    '<div class="wallet-hero" style="margin:0 16px 16px">' +
+      '<div class="lbl">رصيدك الحالي</div>' +
+      '<div class="amount" style="color:' + (isNegative?'#fca5a5':'#03111d') + '">' + balance.toLocaleString('ar-EG') + ' ج.م</div>' +
+      '<div class="sub">الحد الأدنى: ' + limit.toLocaleString('ar-EG') + ' ج.م</div>' +
+    '</div>' +
+    '<div style="background:rgba(255,255,255,.05);border:1px solid ' + statusColor + '40;border-radius:14px;padding:14px;margin:0 16px 16px;text-align:center">' +
+      '<div style="color:' + statusColor + ';font-weight:900;font-size:14px">' + statusText + '</div>' +
+    '</div>' +
+    '<div class="wallet-grid" style="padding:0 16px">' +
+      '<div class="wallet-card"><div class="lbl">إجمالي الأرباح</div><div class="val" style="color:#6ee7b7">' + Number(w.total_earned||0).toLocaleString('ar-EG') + ' ج</div></div>' +
+      '<div class="wallet-card"><div class="lbl">إجمالي العمولات</div><div class="val" style="color:#fcd34d">' + Number(w.total_commission||0).toLocaleString('ar-EG') + ' ج</div></div>' +
+      '<div class="wallet-card"><div class="lbl">كاش مدفوع</div><div class="val">' + Number(w.cash_revenue||0).toLocaleString('ar-EG') + ' ج</div></div>' +
+      '<div class="wallet-card"><div class="lbl">فيزا مدفوع</div><div class="val">' + Number(w.visa_revenue||0).toLocaleString('ar-EG') + ' ج</div></div>' +
+      '<div class="wallet-card"><div class="lbl">طلبات مكتملة</div><div class="val">' + (w.completed_orders||0) + ' / ' + (w.total_orders||0) + '</div></div>' +
+      '<div class="wallet-card" style="background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(6,182,212,.08));border-color:rgba(34,211,238,.3)">' +
+        '<div class="lbl">إجراء</div>' +
+        '<button class="btn sm primary" style="margin-top:4px;width:100%;font-size:11px" onclick="requestRecharge()">💰 طلب إعادة شحن</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="section-head"><h2>💸 آخر العمليات</h2><span class="more">آخر ' + recent.length + ' عملية</span></div>' +
+    '<div class="section-card" style="margin:0 16px 16px">' + recentHtml + '</div>' +
+    '<div style="height:16px"></div>';
+}
+
+function requestRecharge(){
+  if(!state.tech) return;
+  const msg = '💰 طلب إعادة شحن محفظة\n\n' +
+    '👷 الفني: ' + state.tech.name + '\n' +
+    '📞 الهاتف: ' + state.tech.phone + '\n' +
+    '💵 الرصيد الحالي: ' + (state.tech.credit_balance||0) + ' ج.م\n\n' +
+    'أرجو إعادة شحن الرصيد لتستقبل الطلبات.';
+  const adminPhone = '201066049634';
+  window.open('https://wa.me/' + adminPhone + '?text=' + encodeURIComponent(msg), '_blank');
+  toast('📤 تم فتح واتساب لإرسال الطلب','ok');
+}
 async function loadOrders(){
   if(!state.user || !state.tech) return;
   try{
