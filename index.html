@@ -8822,7 +8822,131 @@ async function loadAdminComplaints(){
         var meta = statusMeta[c.status] || statusMeta.pending;
         var typeLabel = typeLabels[c.complaint_type] || typeLabels.other;
         var cid = c.id ? String(c.id) : (c.local_id || '');
+        var isLocal = !c.id || c.local_id;
         var shortCid = cid.slice(-8);
-        var isLocal = !c.id || c
+      }).join('');
+    };
+  }
+})();
+</script>
+<script id="ac-complaint-final">
+(function(){
+  'use strict';
+
+  function injectBtn(){
+    var list = document.getElementById('adminComplaintsList');
+    if(!list) return;
+    list.querySelectorAll('.admin-pro-card').forEach(function(card){
+      if(card.dataset.acBtn === '1') return;
+      var m = (card.textContent || '').match(/#([a-zA-Z0-9_-]{5,})/);
+      if(!m) return;
+      var cid = m[1];
+      var row = card.querySelector('.row[style*="gap"]') || card.querySelector('.row');
+      if(!row || row.querySelector('.ac-details-btn')) return;
+      var b = document.createElement('button');
+      b.className = 'btn sm ac-details-btn';
+      b.textContent = '🔍 فتح التفاصيل';
+      b.style.cssText = 'font-weight:900;background:linear-gradient(135deg,#2f7df6,#18c9e8);color:#03111d;border:none';
+      b.onclick = function(e){ e.preventDefault(); e.stopPropagation(); window.acOpenComplaintFull(cid); };
+      row.insertBefore(b, row.firstChild);
+      card.dataset.acBtn = '1';
+    });
+  }
+
+  window.acOpenComplaintFull = async function(shortId){
+    var c = null;
+    if(db && !DEMO){
+      try {
+        var r = await db.from('tech_complaints').select('*').limit(200);
+        if(!r.error) c = (r.data || []).find(function(x){ return String(x.id||'').slice(-8) === shortId; });
+      } catch(e){}
+    }
+    if(!c){
+      var local = [].concat(safeRead('my_complaints',[]), safeRead('tech_complaints_local',[]), safeRead('complaints_sync_queue_v1',[]));
+      c = local.find(function(x){ var id = String(x.id||x.local_id||''); return id.slice(-8) === shortId || id === shortId; });
+    }
+    if(!c){ if(window.Toast) Toast.err('الشكوى غير موجودة'); return; }
+
+    var order = null;
+    if(c.order_ref){
+      var ref = String(c.order_ref).replace('#','').trim();
+      order = safeRead('orders',[]).find(function(o){ return String(o.id) === ref || String(o.id).slice(-8) === ref; });
+      if(!order && db && !DEMO){
+        try { var r2 = await db.from('orders').select('*').eq('id', ref).maybeSingle(); if(r2.data) order = r2.data; } catch(e){}
+      }
+    }
+
+    var techPhone = c.tech_phone || (order && (order.tech_phone || order.assigned_tech_phone));
+    var tech = null;
+    if(techPhone && db && !DEMO){
+      try { var rt = await db.from('tech_apps').select('*').eq('phone', techPhone).maybeSingle(); tech = rt.data; } catch(e){}
+    }
+
+    var client = null;
+    var clientId = c.client_id || (order && order.client_id);
+    if(clientId && db && !DEMO){
+      try { var rc = await db.from('users_profile').select('*').eq('id', clientId).maybeSingle(); client = rc.data; } catch(e){}
+    }
+
+    var esc = window.esc || function(s){ return String(s||'').replace(/[&<>"']/g,function(x){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]; }); };
+    var fmt = window.formatDate || function(iso){ try { return new Date(iso).toLocaleString('ar-EG', {dateStyle:'short',timeStyle:'short'}); } catch(e){ return iso; } };
+
+    var compSec = '<div class="card" style="padding:12px;border:2px solid #f59e0b;margin-bottom:8px">' +
+      '<h3 style="margin:0 0 8px;color:#fbbf24">📢 الشكوى</h3>' +
+      '<div style="padding:8px;background:rgba(0,0,0,.25);border-radius:8px;line-height:1.8;font-size:13px">' + esc(c.complaint || c.message || '—') + '</div>' +
+      '<div class="muted-sm" style="margin-top:6px">📅 ' + (c.created_at ? fmt(c.created_at) : '—') + '</div>' +
+      (c.order_ref ? '<div class="muted-sm" style="margin-top:4px">📋 مرتبط بطلب: <b>#' + esc(String(c.order_ref).replace('#','')) + '</b></div>' : '') +
+      '</div>';
+
+    var clientSec = '<div class="card" style="padding:12px;border:2px solid #3b82f6;margin-bottom:8px">' +
+      '<h3 style="margin:0 0 8px;color:#93c5fd">👤 العميل</h3>' +
+      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span class="muted">الاسم</span><b>' + esc((client && client.full_name) || c.client_name || '—') + '</b></div>' +
+      '<div style="padding:4px 0;border-bottom:1px solid var(--border)"><span class="muted">📧 الإيميل:</span><div style="direction:ltr;font-size:11px;word-break:break-all;margin-top:3px"><b>' + esc((client && client.email) || c.client_email || clientId || '—') + '</b></div></div>' +
+      '<div style="display:flex;justify-content:space-between;padding:4px 0"><span class="muted">📞 الموبايل</span><b style="direction:ltr">' + esc((client && client.phone) || c.phone || (order && order.details && order.details.phone) || '—') + '</b></div>' +
+      '</div>';
+
+    var orderSec = order ?
+      '<div class="card" style="padding:12px;border:2px solid #06b6d4;margin-bottom:8px">' +
+        '<h3 style="margin:0 0 8px;color:#67e8f9">📋 الطلب #' + esc(String(order.id).slice(-8)) + '</h3>' +
+        '<div style="display:flex;justify-content:space-between;padding:4px 0"><span class="muted">الحالة</span><b>' + esc(order.status || '—') + '</b></div>' +
+        (order.details && order.details.bookingDate ? '<div style="display:flex;justify-content:space-between;padding:4px 0"><span class="muted">📅 الموعد</span><b>' + esc(order.details.bookingDate) + '</b></div>' : '') +
+        (order.total_amount ? '<div style="display:flex;justify-content:space-between;padding:4px 0"><span class="muted">💰 الإجمالي</span><b>' + Number(order.total_amount).toLocaleString('ar-EG') + ' ج.م</b></div>' : '') +
+        '<button class="btn block primary" style="margin-top:8px" onclick="document.getElementById(\'acComplaintModal\').remove();if(typeof acShowOrderWithTech===\'function\')acShowOrderWithTech(\'' + esc(order.id) + '\')">🔍 فتح الطلب بالكامل</button>' +
+      '</div>' :
+      '<div class="card" style="padding:12px;border:2px dashed #94a3b8;margin-bottom:8px;text-align:center;color:#94a3b8"><b>📋 الطلب غير موجود</b></div>';
+
+    var techSec = (tech || techPhone) ?
+      '<div class="card" style="padding:12px;border:2px solid #8b5cf6;margin-bottom:8px">' +
+        '<h3 style="margin:0 0 8px;color:#c4b5fd">👷 الفني</h3>' +
+        '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span class="muted">الاسم</span><b>' + esc((tech && tech.name) || (order && order.tech_name) || '—') + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:4px 0"><span class="muted">📞</span><b style="direction:ltr">' + esc((tech && tech.phone) || techPhone || '—') + '</b></div>' +
+      '</div>' :
+      '<div class="card" style="padding:12px;border:2px dashed #94a3b8;margin-bottom:8px;text-align:center;color:#94a3b8"><b>👷 لا يوجد فني</b></div>';
+
+    var actSec = '<div class="card" style="padding:12px"><div class="row" style="gap:6px;flex-wrap:wrap">' +
+      '<button class="btn sm" onclick="document.getElementById(\'acComplaintModal\').remove();acSetComplaintStatus(\'' + esc(String(c.id||c.local_id)) + '\',\'reviewing\')">🔍 قيد المراجعة</button>' +
+      '<button class="btn sm green" onclick="document.getElementById(\'acComplaintModal\').remove();acSetComplaintStatus(\'' + esc(String(c.id||c.local_id)) + '\',\'resolved\')">✅ تم الحل</button>' +
+      '</div></div>';
+
+    var ex = document.getElementById('acComplaintModal'); if(ex) ex.remove();
+    var m = document.createElement('div');
+    m.id = 'acComplaintModal';
+    m.className = 'modal open';
+    m.innerHTML = '<div class="modalbox" style="max-width:680px">' +
+      '<div class="modal-head"><h2 style="margin:0">📢 تفاصيل الشكوى</h2><button class="btn sm" onclick="document.getElementById(\'acComplaintModal\').remove()">✕</button></div>' +
+      compSec + clientSec + orderSec + techSec + actSec +
+      '<button class="btn block" style="margin-top:10px" onclick="document.getElementById(\'acComplaintModal\').remove()">إغلاق</button>' +
+      '</div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e){ if(e.target === m) m.remove(); });
+  };
+
+  setInterval(injectBtn, 2000);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(injectBtn, 1000); });
+  else setTimeout(injectBtn, 1000);
+  console.log('[HVAC] Complaint button + modal ready');
+})();
+</script>
+     
 </body>
 </html>
