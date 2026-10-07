@@ -9294,6 +9294,87 @@ async function loadAdminComplaints(){
   console.log('[HVAC] 🗺️ Live map + ETA ready');
 })();
    </script>
+     <script id="ac-city-dropdown">
+(function(){
+  'use strict';
+  var CITIES = [
+    ['الاسكندرية','الإسكندرية'],
+    ['البحيرة','البحيرة'],
+    ['القاهرة','القاهرة'],
+    ['الجيزة','الجيزة'],
+    ['القليوبية','القليوبية'],
+    ['الدقهلية','الدقهلية'],
+    ['الشرقية','الشرقية'],
+    ['الغربية','الغربية'],
+    ['المنوفية','المنوفية'],
+    ['كفر الشيخ','كفر الشيخ'],
+    ['دمياط','دمياط'],
+    ['بورسعيد','بورسعيد'],
+    ['الاسماعيلية','الإسماعيلية'],
+    ['السويس','السويس'],
+    ['شمال سيناء','شمال سيناء'],
+    ['جنوب سيناء','جنوب سيناء'],
+    ['الفيوم','الفيوم'],
+    ['بني سويف','بني سويف'],
+    ['المنيا','المنيا'],
+    ['اسيوط','أسيوط'],
+    ['سوهاج','سوهاج'],
+    ['قنا','قنا'],
+    ['الاقصر','الأقصر'],
+    ['اسوان','أسوان'],
+    ['البحر الأحمر','البحر الأحمر'],
+    ['الوادي الجديد','الوادي الجديد'],
+    ['مطروح','مطروح']
+  ];
+
+  function convertCityField(){
+    var inp = document.getElementById('svcCity');
+    if(!inp) return;
+    if(inp.tagName === 'SELECT') return; // already converted
+
+    // حفظ القيمة الحالية
+    var current = inp.value || '';
+
+    // بناء القائمة
+    var html = '<select id="svcCity" name="svcCity" class="input">';
+    html += '<option value="">— اختر المحافظة —</option>';
+    CITIES.forEach(function(c){
+      var sel = (c[0] === current) ? ' selected' : '';
+      html += '<option value="' + c[0] + '"' + sel + '>' + c[1] + '</option>';
+    });
+    html += '</select>';
+
+    // استبدل الـ input
+    inp.outerHTML = html;
+
+    // غير الـ label لو مكتوب "المدينة"
+    var lbl = document.querySelector('label[for="svcCity"]') || inp.parentElement.querySelector('label');
+    if(lbl && (lbl.textContent || '').indexOf('المدينة') > -1){
+      lbl.innerHTML = 'المحافظة <span class="req">*</span>';
+    }
+
+    // ضيف نجمة النجمة عشان تبقى مطلوبة
+    var sel = document.getElementById('svcCity');
+    if(sel) sel.setAttribute('required', 'required');
+
+    LOG && LOG.ok && LOG.ok('City dropdown activated');
+  }
+
+  // راقب الصفحة
+  function run(){
+    if(state && state.page === 'services') convertCityField();
+  }
+
+  if(typeof registerRenderHook === 'function'){
+    registerRenderHook(function(){ setTimeout(run, 100); });
+  }
+  setInterval(run, 1500);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 1000); });
+  else setTimeout(run, 1000);
+
+  console.log('[HVAC] City dropdown converter ready');
+})();
+     </script>
      
 </body>
 </html>
