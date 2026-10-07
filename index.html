@@ -8947,6 +8947,353 @@ async function loadAdminComplaints(){
   console.log('[HVAC] Complaint button + modal ready');
 })();
 </script>
+   <script id="ac-live-map-eta">
+(function(){
+  'use strict';
+
+  var REFRESH_MS = 30000; // 30 ثانية
+  var AVG_SPEED_KMH = 25;  // متوسط سرعة الفني
+
+  // ===== حساب المسافة =====
+  function distanceKm(lat1, lng1, lat2, lng2){
+    var R = 6371;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLng = (lng2 - lng1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  // ===== ETA =====
+  function calcETA(km){
+    if(!km || km < 0) return null;
+    var min = Math.round((km / AVG_SPEED_KMH) * 60);
+    if(min < 1) min = 1;
+    return min;
+  }
+
+  function etaLabel(min){
+    if(min == null) return '—';
+    if(min < 60) return min + ' دقيقة';
+    var h = Math.floor(min / 60);
+    var m = min % 60;
+    return h + ' س ' + (m ? m + ' د' : '');
+  }
+
+  // ===== تحميل Leaflet =====
+  async function ensureLeaflet(){
+    if(window.L) return true;
+    if(!document.querySelector('link[href*="leaflet.css"]')){
+      var css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(css);
+    }
+    if(!document.querySelector('script[src*="leaflet.js"]')){
+      await new Promise(function(res){
+        var s = document.createElement('script');
+        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        s.onload = res;
+        s.onerror = res;
+        document.head.appendChild(s);
+      });
+    } else {
+      // انتظر لو لسه بيحمل
+      for(var i=0; i<20; i++){
+        if(window.L) break;
+        await new Promise(function(r){ setTimeout(r, 200); });
+      }
+    }
+    return !!window.L;
+  }
+
+  // ===== جلب بيانات الطلب + الفني =====
+  async function fetchTrackingData(orderId){
+    var orders = safeRead('orders', []);
+    var order = orders.find(function(o){ return String(o.id) === String(orderId); });
+    if(!order && db && !DEMO){
+      try { var r = await db.from('orders').select('*').eq('id', orderId).maybeSingle(); if(r.data) order = r.data; } catch(e){}
+    }
+    if(!order) return null;
+
+    var techPhone = order.tech_phone || order.assigned_tech_phone;
+    var tech = null;
+    if(techPhone && db && !DEMO){
+      try { var rt = await db.from('tech_apps').select('id,name,phone,current_lat,current_lng,last_seen,availability,city').eq('phone', techPhone).maybeSingle(); tech = rt.data; } catch(e){}
+    }
+
+    return { order: order, tech: tech, techPhone: techPhone };
+  }
+
+  // ===== Modal الخريطة =====
+  window.acOpenLiveTracking = async function(orderId){
+    if(!orderId) return;
+
+    // امسح القديم
+    var old = document.getElementById('acLiveMapModal');
+    if(old) old.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'acLiveMapModal';
+    modal.className = 'modal open';
+    modal.innerHTML =
+      '<div class="modalbox" style="max-width:720px;padding:14px">' +
+        '<div class="modal-head"><h2 style="margin:0">🗺️ تتبع حي</h2>' +
+        '<button class="btn sm" onclick="window.acCloseLiveMap()">✕</button></div>' +
+        '<div id="acLiveMapInfo" class="notice info" style="text-align:center">⏳ جارٍ التحميل...</div>' +
+        '<div id="acLiveMap" style="height:340px;border-radius:14px;overflow:hidden;background:#1f2937;margin-top:8px"></div>' +
+        '<div id="acLiveMapStats" style="margin-top:10px"></div>' +
+        '<div class="row" style="gap:6px;margin-top:10px">' +
+          '<button class="btn sm" style="flex:1" onclick="window.acRefreshLiveMap()">🔄 تحديث الآن</button>' +
+          '<button class="btn sm" style="flex:1" onclick="window.acOpenExternalMap()">🗺️ فتح الخريطة</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e){ if(e.target === modal) window.acCloseLiveMap(); });
+
+    window.__acLiveOrderId = orderId;
+
+    if(!(await ensureLeaflet())){
+      document.getElementById('acLiveMapInfo').className = 'notice err';
+      document.getElementById('acLiveMapInfo').textContent = 'تعذر تحميل الخريطة';
+      return;
+    }
+
+    await window.acRefreshLiveMap();
+
+    if(window.__acLiveTimer) clearInterval(window.__acLiveTimer);
+    window.__acLiveTimer = setInterval(window.acRefreshLiveMap, REFRESH_MS);
+  };
+
+  window.acCloseLiveMap = function(){
+    if(window.__acLiveTimer) clearInterval(window.__acLiveTimer);
+    window.__acLiveTimer = null;
+    if(window.__acMap && window.__acMap.remove){
+      try { window.__acMap.remove(); } catch(e){}
+      window.__acMap = null;
+    }
+    var m = document.getElementById('acLiveMapModal');
+    if(m) m.remove();
+  };
+
+  window.acOpenExternalMap = function(){
+    var center = window.__acMapCenter;
+    if(center){
+      window.open('https://www.openstreetmap.org/?mlat=' + center[0] + '&mlon=' + center[1] + '#map=16/' + center[0] + '/' + center[1], '_blank');
+    } else if(window.__acLiveOrderId){
+      var o = safeRead('orders', []).find(function(x){ return String(x.id) === String(window.__acLiveOrderId); });
+      if(o && o.customer_lat && o.customer_lng){
+        window.open('https://www.openstreetmap.org/?mlat=' + o.customer_lat + '&mlon=' + o.customer_lng + '#map=16/' + o.customer_lat + '/' + o.customer_lng, '_blank');
+      }
+    }
+  };
+
+  window.acRefreshLiveMap = async function(){
+    var orderId = window.__acLiveOrderId;
+    if(!orderId) return;
+
+    var data = await fetchTrackingData(orderId);
+    if(!data){ 
+      var info = document.getElementById('acLiveMapInfo');
+      if(info){ info.className = 'notice err'; info.textContent = 'الطلب غير موجود'; }
+      return;
+    }
+
+    var o = data.order, tech = data.tech;
+    var d = o.details || {};
+
+    // إحداثيات العميل — من الطلب
+    var clientLat = parseFloat(o.customer_lat || d.lat || 0);
+    var clientLng = parseFloat(o.customer_lng || d.lng || 0);
+    var hasClient = clientLat && clientLng;
+
+    // إحداثيات الفني
+    var techLat = tech && tech.current_lat ? parseFloat(tech.current_lat) : 0;
+    var techLng = tech && tech.current_lng ? parseFloat(tech.current_lng) : 0;
+    var hasTech = techLat && techLng;
+
+    var km = (hasClient && hasTech) ? distanceKm(techLat, techLng, clientLat, clientLng) : null;
+    var eta = calcETA(km);
+
+    // معلومات أعلى الخريطة
+    var info = document.getElementById('acLiveMapInfo');
+    if(info){
+      if(!tech){
+        info.className = 'notice warn';
+        info.innerHTML = '⚠️ لم يتم تعيين فني للطلب بعد';
+      } else if(!hasTech){
+        info.className = 'notice warn';
+        info.innerHTML = '📍 الفني <b>' + (tech.name || '') + '</b> لم يشارك موقعه بعد';
+      } else {
+        info.className = 'notice ok';
+        info.innerHTML = '👷 <b>' + (tech.name || 'الفني') + '</b> في الطريق إليك';
+      }
+    }
+
+    // إحصائيات
+    var stats = document.getElementById('acLiveMapStats');
+    if(stats){
+      if(hasClient && hasTech){
+        var lastSeen = tech.last_seen ? new Date(tech.last_seen) : null;
+        var lastMin = lastSeen ? Math.round((Date.now() - lastSeen.getTime()) / 60000) : null;
+        var lastLabel = lastMin == null ? '—' :
+                        lastMin < 1 ? 'الآن' :
+                        lastMin < 60 ? lastMin + ' دقيقة' :
+                        Math.floor(lastMin/60) + ' س ' + (lastMin%60) + ' د';
+
+        stats.innerHTML =
+          '<div class="card" style="padding:12px">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+              '<div style="text-align:center"><div style="font-size:11px;color:#94a3b8">📍 المسافة</div><div style="font-size:20px;font-weight:900;color:#67e8f9">' + km.toFixed(1) + ' كم</div></div>' +
+              '<div style="text-align:center"><div style="font-size:11px;color:#94a3b8">⏱️ الوقت المتوقع</div><div style="font-size:20px;font-weight:900;color:#fbbf24">' + etaLabel(eta) + '</div></div>' +
+            '</div>' +
+            '<div class="muted-sm" style="text-align:center;margin-top:8px">آخر تحديث لموقع الفني: ' + lastLabel + '</div>' +
+          '</div>';
+      } else {
+        stats.innerHTML = '';
+      }
+    }
+
+    // ===== بناء الخريطة =====
+    var host = document.getElementById('acLiveMap');
+    if(!host) return;
+    if(!window.__acMap){
+      host.innerHTML = '';
+      window.__acMap = L.map(host, { zoomControl: true, attributionControl: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(window.__acMap);
+    }
+    var map = window.__acMap;
+
+    // أيقونات مخصصة
+    var clientIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:22px;height:22px;background:#3b82f6;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.5)"></div>',
+      iconSize: [22,22], iconAnchor: [11,11]
+    });
+    var techIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:26px;height:26px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 12px rgba(239,68,68,.7);display:flex;align-items:center;justify-content:center;font-size:13px">👷</div>',
+      iconSize: [26,26], iconAnchor: [13,13]
+    });
+
+    if(window.__acClientMarker) map.removeLayer(window.__acClientMarker);
+    if(window.__acTechMarker) map.removeLayer(window.__acTechMarker);
+    if(window.__acRouteLine) map.removeLayer(window.__acRouteLine);
+
+    var bounds = [];
+
+    if(hasClient){
+      window.__acClientMarker = L.marker([clientLat, clientLng], { icon: clientIcon })
+        .addTo(map)
+        .bindPopup('📍 موقعك');
+      bounds.push([clientLat, clientLng]);
+    }
+
+    if(hasTech){
+      window.__acTechMarker = L.marker([techLat, techLng], { icon: techIcon })
+        .addTo(map)
+        .bindPopup('👷 ' + (tech.name || 'الفني') + (km ? '<br>⏱️ ' + etaLabel(eta) : ''));
+      bounds.push([techLat, techLng]);
+    }
+
+    if(hasClient && hasTech){
+      window.__acRouteLine = L.polyline([[techLat, techLng], [clientLat, clientLng]], {
+        color: '#22d3ee', weight: 4, opacity: 0.8, dashArray: '10 6'
+      }).addTo(map);
+    }
+
+    if(bounds.length === 2){
+      map.fitBounds(bounds, { padding: [40, 40] });
+      window.__acMapCenter = [(techLat + clientLat)/2, (techLng + clientLng)/2];
+    } else if(bounds.length === 1){
+      map.setView(bounds[0], 15);
+      window.__acMapCenter = bounds[0];
+    } else {
+      // مصر كمركز افتراضي
+      map.setView([30.0444, 31.2357], 6);
+      window.__acMapCenter = [30.0444, 31.2357];
+    }
+  };
+
+  // ===== زر تتبع في طلبات العميل =====
+  function injectTrackingButtons(){
+    var list = document.getElementById('ordersList');
+    if(!list) return;
+    list.querySelectorAll('.card').forEach(function(card){
+      if(card.dataset.acTrack === '1') return;
+      var txt = card.textContent || '';
+      var m = txt.match(/#([a-zA-Z0-9_-]{5,})/);
+      if(!m) return;
+      var oid = m[1];
+      // ابحث عن الطلب
+      var orders = safeRead('orders', []);
+      var o = orders.find(function(x){ return String(x.id).slice(-8) === oid; });
+      if(!o) return;
+      // لو الطلب نشط أو فيه فني
+      if(['done','completed','cancelled'].indexOf(o.status) !== -1) return;
+
+      var row = card.querySelector('.row[style*="margin-top"]');
+      if(!row) {
+        var rows = card.querySelectorAll('.row');
+        if(rows.length) row = rows[rows.length - 1];
+      }
+      if(!row || row.querySelector('.ac-track-btn')) return;
+
+      var b = document.createElement('button');
+      b.className = 'btn sm ac-track-btn';
+      b.textContent = '🗺️ تتبع الفني';
+      b.style.cssText = 'background:#0c4a6e;color:#cffafe';
+      b.onclick = function(e){ e.preventDefault(); e.stopPropagation(); window.acOpenLiveTracking(o.id); };
+      row.appendChild(b);
+      card.dataset.acTrack = '1';
+    });
+  }
+
+  // ===== زر تتبع في لوحة الفني =====
+  function injectTechTrackingButtons(){
+    var panel = document.getElementById('techPanelContent');
+    if(!panel) return;
+    panel.querySelectorAll('div[style*="border-bottom"]').forEach(function(card){
+      if(card.dataset.acTrackTech === '1') return;
+      var txt = card.textContent || '';
+      var m = txt.match(/#([a-zA-Z0-9_-]{5,})/);
+      if(!m) return;
+      var oid = m[1];
+      var orders = safeRead('orders', []);
+      var o = orders.find(function(x){ return String(x.id).slice(-8) === oid; });
+      if(!o) return;
+      if(['done','completed','cancelled'].includes(o.status)) return;
+
+      var row = card.querySelector('.row');
+      if(!row || row.querySelector('.ac-track-tech-btn')) return;
+
+      var b = document.createElement('button');
+      b.className = 'btn sm ac-track-tech-btn';
+      b.textContent = '🗺️ موقع العميل';
+      b.style.cssText = 'background:#0c4a6e;color:#cffafe';
+      b.onclick = function(e){ e.preventDefault(); e.stopPropagation(); window.acOpenLiveTracking(o.id); };
+      row.appendChild(b);
+      card.dataset.acTrackTech = '1';
+    });
+  }
+
+  // ===== Observer =====
+  function runInjectors(){
+    injectTrackingButtons();
+    injectTechTrackingButtons();
+  }
+  setInterval(runInjectors, 2000);
+  if(typeof registerRenderHook === 'function'){
+    registerRenderHook(function(){ setTimeout(runInjectors, 300); });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(runInjectors, 800); });
+  else setTimeout(runInjectors, 800);
+
+  console.log('[HVAC] 🗺️ Live map + ETA ready');
+})();
+   </script>
      
 </body>
 </html>
