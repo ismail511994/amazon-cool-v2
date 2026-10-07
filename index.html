@@ -7262,6 +7262,46 @@ async function loadAdminComplaints(){
      <style id="ac-nav-force">
 #acBottomNav{display:grid!important}
      </style>
+     <script id="ac-sos-fix">
+(function(){
+  'use strict';
+  function buildSosModal(){
+    if(document.getElementById('acSosRealModal'))return;
+    var m=document.createElement('div');
+    m.id='acSosRealModal';
+    m.className='modal';
+    m.innerHTML='<div class="modalbox" style="max-width:420px">'+
+      '<div class="modal-head"><h2>🆘 طوارئ سريعة</h2>'+
+      '<button class="btn sm" onclick="document.getElementById(\'acSosRealModal\').classList.remove(\'open\')">✕</button></div>'+
+      '<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">'+
+        '<a class="btn primary block" href="tel:+201066049634" style="padding:14px;text-decoration:none;text-align:center">📞 اتصال فوري</a>'+
+        '<a class="btn green block" href="https://wa.me/201066049634?text=%F0%9F%9A%A8%20%D8%B7%D9%88%D8%A7%D8%B1%D8%A6%20-%20%D9%85%D8%AD%D8%AA%D8%A7%D8%AC%20%D9%81%D9%86%D9%8A%20%D8%AA%D9%83%D9%8A%D9%8A%D9%81%20%D8%A8%D8%B3%D8%B1%D8%B9%D8%A9" target="_blank" rel="noopener" style="padding:14px;text-decoration:none;text-align:center">💬 واتساب سريع</a>'+
+        '<button type="button" class="btn amber block" style="padding:14px" onclick="var m=document.getElementById(\'acSosRealModal\');if(m)m.classList.remove(\'open\');if(typeof state!==\'undefined\')state.emergency=true;if(typeof setPage===\'function\')setPage(\'services\');">🚨 طلب طوارئ الآن</button>'+
+      '</div>'+
+    '</div>';
+    document.body.appendChild(m);
+    m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open')});
+  }
+  function attach(){
+    var nav=document.getElementById('acBottomNav');
+    if(!nav)return;
+    var btn=nav.querySelector('.ac-sos-bottom');
+    if(!btn||btn.dataset.acSosFix==='1')return;
+    btn.dataset.acSosFix='1';
+    btn.removeAttribute('onclick');
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      buildSosModal();
+      document.getElementById('acSosRealModal').classList.add('open');
+    });
+    buildSosModal();
+  }
+  function boot(){attach();setTimeout(attach,800);setTimeout(attach,2000);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
+  else boot();
+  if(typeof registerRenderHook==='function')registerRenderHook(attach);
+})();
+     </script>
      
 </body>
 </html>
