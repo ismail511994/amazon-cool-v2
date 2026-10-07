@@ -7302,6 +7302,58 @@ async function loadAdminComplaints(){
   if(typeof registerRenderHook==='function')registerRenderHook(attach);
 })();
      </script>
+     <script id="ac-back-button-fix">
+(function(){
+  'use strict';
+  var _suppress=true;
+
+  function getCurrentPage(){
+    try{ return (window.state && window.state.page) || 'home'; }catch(e){ return 'home'; }
+  }
+
+  function pushPage(page){
+    try{
+      history.pushState({acPage:page}, '', location.pathname + location.search);
+    }catch(e){}
+  }
+
+  // اعترض تغيير الصفحة — سجّل في history
+  var _origSetPage = window.setPage;
+  if(typeof _origSetPage==='function' && !_origSetPage.__acHistoryWrapped){
+    window.setPage=function(p){
+      var current=getCurrentPage();
+      var result=_origSetPage.apply(this,arguments);
+      if(p && p!==current){
+        pushPage(p);
+      }
+      return result;
+    };
+    window.setPage.__acHistoryWrapped=true;
+  }
+
+  // اعترض زر الرجوع
+  window.addEventListener('popstate',function(e){
+    if(_suppress){ _suppress=false; return; }
+    var targetPage=(e.state && e.state.acPage) || 'home';
+    try{
+      if(window.state && window.state.page===targetPage) return;
+      if(typeof _origSetPage==='function'){
+        _origSetPage.call(window, targetPage);
+      }
+    }catch(err){}
+  });
+
+  // سجّل صفحة البداية
+  setTimeout(function(){
+    try{
+      history.replaceState({acPage:getCurrentPage()}, '', location.pathname + location.search);
+      _suppress=false;
+    }catch(e){ _suppress=false; }
+  }, 100);
+
+  console.log('[HVAC] 🔙 Back button fix ready');
+})();
+     </script>
      
 </body>
 </html>
