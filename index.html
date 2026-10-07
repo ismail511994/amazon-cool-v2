@@ -8383,6 +8383,446 @@ async function loadAdminComplaints(){
   console.log('[HVAC] 🔄 Complaints sync fix ready');
 })();
      </script>
-     
+     <script id="ac-complaint-full-details">
+(function(){
+  'use strict';
+
+  // ============================================
+  // 1) اجلب بيانات العميل من Supabase
+  // ============================================
+  async function fetchClientProfile(clientId, clientName, clientEmail){
+    if(!db || DEMO) return null;
+    try {
+      // جرب بـ id
+      if(clientId){
+        var r1 = await db.from('users_profile').select('*').eq('id', clientId).maybeSingle();
+        if(r1.data) return r1.data;
+      }
+      // جرب بالاسم
+      if(clientName){
+        var r2 = await db.from('users_profile').select('*').eq('full_name', clientName).limit(1);
+        if(r2.data && r2.data[0]) return r2.data[0];
+      }
+    } catch(e){ LOG.warn('fetchClientProfile:', e); }
+    return null;
+  }
+
+  // ============================================
+  // 2) اجلب بيانات الفني
+  // ============================================
+  async function fetchTechInfo(techPhone){
+    if(!techPhone || !db || DEMO) return null;
+    try {
+      var r = await db.from('tech_apps').select('*').eq('phone', techPhone).maybeSingle();
+      return r.data || null;
+    } catch(e){ LOG.warn('fetchTechInfo:', e); return null; }
+  }
+
+  // ============================================
+  // 3) Modal كامل للشكوى + الطلب
+  // ============================================
+  window.acOpenComplaintFull = async function(complaintId){
+    var complaints = [];
+    // جيب من السيرفر
+    if(db && !DEMO){
+      try {
+        var r = await db.from('tech_complaints').select('*').eq('id', complaintId).maybeSingle();
+        if(r.data) complaints = [r.data];
+      } catch(e){}
+    }
+    // لو مش لاقي، جيب من المحلي
+    if(!complaints.length){
+      var local = [].concat(
+        safeRead('my_complaints', []),
+        safeRead('tech_complaints_local', []),
+        safeRead('complaints_sync_queue_v1', [])
+      );
+      complaints = local.filter(function(c){ return c.id === complaintId || c.local_id === complaintId; });
+    }
+
+    if(!complaints.length){
+      if(window.Toast) Toast.err('الشكوى غير موجودة');
+      return;
+    }
+
+    var c = complaints[0];
+    var isLocal = !c.id || c.local_id;
+
+    // ===== جيب الطلب المرتبط =====
+    var orderRef = c.order_ref;
+    var order = null;
+    if(orderRef){
+      var cleanRef = String(orderRef).replace('#','').trim();
+      var orders = safeRead('orders', []);
+      order = orders.find(function(o){
+        return String(o.id) === cleanRef || String(o.id).slice(-8) === cleanRef;
+      });
+    }
+
+    // ===== جيب بيانات الفني =====
+    var techPhone = (order && (order.tech_phone || order.assigned_tech_phone)) || c.tech_phone;
+    var tech = null;
+    if(techPhone){
+      tech = await fetchTechInfo(techPhone);
+    }
+
+    // ===== جيب بيانات العميل =====
+    var clientId = c.client_id || (order && order.client_id);
+    var clientName = c.client_name || (order && order.client_name);
+    var client = await fetchClientProfile(clientId, clientName);
+
+    // ===== بناء الـ Modal =====
+    var existing = document.getElementById('acComplaintModal');
+    if(existing) existing.remove();
+
+    var statusMeta = {
+      pending:   ['⏳', 'قيد الانتظار', '#f59e0b'],
+      reviewing: ['🔍', 'قيد المراجعة', '#3b82f6'],
+      resolved:  ['✅', 'تم الحل', '#10b981'],
+      closed:    ['📁', 'مغلق', '#64748b'],
+      rejected:  ['❌', 'مرفوض', '#ef4444']
+    };
+    var meta = statusMeta[c.status] || statusMeta.pending;
+
+    var typeLabels = {
+      service:'🔧 خدمة فنية', store:'🛒 طلب متجر', tech:'👷 الفني',
+      billing:'💰 فاتورة', delay:'⏰ تأخير', other:'📝 أخرى',
+      customer:'👤 العميل', company:'🏢 الشركة'
+    };
+    var typeLabel = typeLabels[c.complaint_type] || typeLabels.other;
+
+    var shortCid = String(c.id || c.local_id || '').slice(-8);
+
+    // ============ قسم بيانات العميل ============
+    var clientHTML = '<div class="card" style="padding:12px;margin-top:10px;border:2px solid #3b82f6">' +
+      '<h3 style="margin:0 0 10px 0;color:#93c5fd">👤 بيانات العميل</h3>';
+
+    var clientEmail = client && client.email ? client.email :
+                     (c.client_email) ||
+                     (order && order.client_email) ||
+                     (clientId && clientId.indexOf('@') > -1 ? clientId : '—');
+
+    var clientPhone = (client && client.phone) ||
+                      c.phone ||
+                      (order && order.details && order.details.phone) ||
+                      '—';
+
+    var clientFullName = (client && client.full_name) ||
+                         c.client_name ||
+                         (order && order.client_name) ||
+                         '—';
+
+    clientHTML +=
+      '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span class="muted">الاسم</span>' +
+        '<b>' + esc(clientFullName) + '</b>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span class="muted">📧 الإيميل</span>' +
+        '<b style="direction:ltr;font-size:11px;word-break:break-all;max-width:60%">' + esc(clientEmail) + '</b>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span class="muted">📞 الموبايل</span>' +
+        '<b style="direction:ltr">' + esc(clientPhone) + '</b>' +
+      '</div>';
+
+    if(client && client.role){
+      clientHTML += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span class="muted">صلاحية الحساب</span>' +
+        '<b>' + esc(client.role) + '</b>' +
+      '</div>';
+    }
+
+    if(clientPhone && clientPhone !== '—'){
+      var wpNum = String(clientPhone).replace(/[^0-9]/g,'').replace(/^0/,'20');
+      clientHTML +=
+        '<div class="row" style="gap:6px;margin-top:10px">' +
+          '<a class="btn sm block" style="flex:1;text-align:center;text-decoration:none" href="tel:' + esc(clientPhone) + '">📞 اتصال</a>' +
+          '<a class="btn sm green block" style="flex:1;text-align:center;text-decoration:none" href="https://wa.me/' + wpNum + '" target="_blank">💬 واتساب</a>' +
+        '</div>';
+    }
+
+    clientHTML += '</div>';
+
+    // ============ قسم بيانات الطلب ============
+    var orderHTML = '';
+    if(order){
+      var od = order.details || {};
+      var serviceLabels = {
+        installation:'تركيب تكييف',uninstall:'فك تكييف',maintenance:'صيانة عامة',
+        periodic:'صيانة دورية',diagnosis:'تشخيص عطل',piping:'تأسيس مواسير',
+        cleaning:'تنظيف وغسيل',gas:'شحن غاز',store:'طلب متجر'
+      };
+      var statusLabels = {
+        pending:'قيد المراجعة',confirmed:'مؤكد',assigned:'تم تعيين فني',
+        on_way:'الفني في الطريق',arrived:'الفني وصل',
+        report_pending:'التقرير بانتظار الموافقة',report_approved:'تمت الموافقة',
+        paid:'تم الدفع',done:'مكتمل',completed:'مكتمل',cancelled:'ملغي'
+      };
+
+      orderHTML = '<div class="card" style="padding:12px;margin-top:10px;border:2px solid #06b6d4">' +
+        '<h3 style="margin:0 0 10px 0;color:#67e8f9">📋 بيانات الطلب #' + esc(String(order.id).slice(-8)) + '</h3>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">الخدمة</span>' +
+          '<b>' + esc(serviceLabels[order.service_type] || order.service_type) + '</b>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">حالة الطلب</span>' +
+          '<b>' + esc(statusLabels[order.status] || order.status) + '</b>' +
+        '</div>';
+
+      if(od.bookingDate){
+        orderHTML += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">📅 الموعد</span>' +
+          '<b>' + esc(od.bookingDate) + ' ' + esc(od.bookingTime || '') + '</b>' +
+        '</div>';
+      }
+
+      if(order.total_amount){
+        orderHTML += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">💰 الإجمالي</span>' +
+          '<b style="color:#67e8f9">' + Number(order.total_amount).toLocaleString('ar-EG') + ' ج.م</b>' +
+        '</div>';
+      }
+
+      if(od.address){
+        orderHTML += '<div style="padding:8px 0;border-top:1px solid var(--border);margin-top:6px">' +
+          '<span class="muted">📍 العنوان:</span>' +
+          '<div style="margin-top:4px;font-size:12px;line-height:1.6">' + esc(od.address) + '</div>' +
+        '</div>';
+      }
+
+      if(od.problem){
+        orderHTML += '<div style="padding:8px 0;border-top:1px solid var(--border)">' +
+          '<span class="muted">🔍 المشكلة:</span>' +
+          '<div style="margin-top:4px;font-size:12px;line-height:1.6">' + esc(od.problem) + '</div>' +
+        '</div>';
+      }
+
+      if(od.emergency){
+        orderHTML += '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px;margin-top:8px;text-align:center;color:#fca5a5;font-weight:900">🚨 طلب طوارئ</div>';
+      }
+
+      // زر فتح الطلب الكامل
+      orderHTML += '<button class="btn block" style="margin-top:10px" onclick="document.getElementById(\'acComplaintModal\').remove();acShowOrderWithTech(\'' + esc(order.id) + '\')">🔍 فتح الطلب بالكامل</button>';
+
+      orderHTML += '</div>';
+    } else {
+      orderHTML = '<div class="card" style="padding:12px;margin-top:10px;border:2px dashed #94a3b8;background:rgba(148,163,184,.05)">' +
+        '<div style="text-align:center;color:#94a3b8">' +
+          '<div style="font-size:32px;margin-bottom:6px">📋</div>' +
+          '<b>الطلب غير مرتبط</b>' +
+          (orderRef ? '<p class="muted-sm" style="margin:6px 0 0">مرجع: ' + esc(orderRef) + '</p>' : '<p class="muted-sm" style="margin:6px 0 0">لا يوجد رقم طلب</p>') +
+        '</div>' +
+      '</div>';
+    }
+
+    // ============ قسم بيانات الفني ============
+    var techHTML = '';
+    if(tech || techPhone){
+      var t = tech || {};
+      var techName = t.name || (order && order.tech_name) || '—';
+      var techPhoneF = t.phone || techPhone || '—';
+      var availMap = { available: '🟢 متاح', busy: '🟡 مشغول', offline: '⚪ غير متصل' };
+      var availLabel = t.availability ? (availMap[t.availability] || t.availability) : '—';
+
+      techHTML = '<div class="card" style="padding:12px;margin-top:10px;border:2px solid #8b5cf6">' +
+        '<h3 style="margin:0 0 10px 0;color:#c4b5fd">👷 الفني المعين</h3>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">الاسم</span>' +
+          '<b>' + esc(techName) + '</b>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">📞 الموبايل</span>' +
+          '<b style="direction:ltr">' + esc(techPhoneF) + '</b>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">حالة التوفر</span>' +
+          '<b>' + availLabel + '</b>' +
+        '</div>';
+
+      if(t.city){
+        techHTML += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">📍 المدينة</span>' +
+          '<b>' + esc(t.city) + '</b>' +
+        '</div>';
+      }
+
+      if(t.total_completed){
+        techHTML += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">🏆 طلبات مكتملة</span>' +
+          '<b>' + t.total_completed + '</b>' +
+        '</div>';
+      }
+
+      if(t.rating_avg){
+        techHTML += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">⭐ التقييم</span>' +
+          '<b>' + t.rating_avg + '</b>' +
+        '</div>';
+      }
+
+      if(t.last_seen){
+        techHTML += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span class="muted">🕐 آخر ظهور</span>' +
+          '<b style="font-size:11px">' + new Date(t.last_seen).toLocaleString('ar-EG') + '</b>' +
+        '</div>';
+      }
+
+      if(techPhoneF && techPhoneF !== '—'){
+        var wpT = String(techPhoneF).replace(/[^0-9]/g,'').replace(/^0/,'20');
+        techHTML +=
+          '<div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">' +
+            '<a class="btn sm block" style="flex:1;text-align:center;text-decoration:none;min-width:100px" href="tel:' + esc(techPhoneF) + '">📞 اتصال</a>' +
+            '<a class="btn sm green block" style="flex:1;text-align:center;text-decoration:none;min-width:100px" href="https://wa.me/' + wpT + '" target="_blank">💬 واتساب</a>' +
+            (typeof window.acOpenTechDetails === 'function' ? '<button class="btn sm" style="flex:1;min-width:100px;background:#0c4a6e;color:#cffafe" onclick="document.getElementById(\'acComplaintModal\').remove();acOpenTechDetails(\'' + esc(techPhoneF) + '\')">👁️ الملف الكامل</button>' : '') +
+          '</div>';
+      }
+
+      techHTML += '</div>';
+    } else {
+      techHTML = '<div class="card" style="padding:12px;margin-top:10px;border:2px dashed #f59e0b;background:rgba(245,158,11,.05)">' +
+        '<div style="text-align:center;color:#fbbf24">' +
+          '<div style="font-size:32px;margin-bottom:6px">👷</div>' +
+          '<b>لا يوجد فني معين</b>' +
+          '<p class="muted-sm" style="margin:6px 0 0">الطلب لسه بدون فني أو الشكوى عن الشركة</p>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // ============ قسم الشكوى نفسها ============
+    var complaintHTML = '<div class="card" style="padding:12px;margin-top:10px;border:2px solid #f59e0b">' +
+      '<div class="row between" style="align-items:center;margin-bottom:10px">' +
+        '<h3 style="margin:0;color:#fbbf24">📢 تفاصيل الشكوى</h3>' +
+        '<span class="pill" style="background:' + meta[2] + ';color:#fff">' + meta[0] + ' ' + meta[1] + '</span>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span class="muted">نوع الشكوى</span>' +
+        '<b>' + typeLabel + '</b>' +
+      '</div>' +
+      '<div style="padding:10px;background:rgba(0,0,0,.25);border-radius:10px;margin-top:10px;line-height:1.8;font-size:13px">' +
+        esc(c.complaint || c.message || c.reason || '—') +
+      '</div>' +
+      '<div class="muted-sm" style="margin-top:8px">📅 ' + formatDate(c.created_at) + '</div>' +
+    '</div>';
+
+    // ============ أزرار الإجراءات ============
+    var actionsHTML = '<div class="card" style="padding:12px;margin-top:10px">' +
+      '<h3 style="margin:0 0 10px 0">⚡ إجراءات الإدارة</h3>' +
+      '<div class="row" style="gap:6px;flex-wrap:wrap">' +
+        (!isLocal ? '<button class="btn sm" onclick="acSetComplaintStatus(\'' + esc(String(c.id)) + '\',\'reviewing\')">قيد المراجعة</button>' : '') +
+        (!isLocal ? '<button class="btn sm green" onclick="acSetComplaintStatus(\'' + esc(String(c.id)) + '\',\'resolved\')">✅ تم الحل</button>' : '') +
+        (!isLocal ? '<button class="btn sm red" onclick="acSetComplaintStatus(\'' + esc(String(c.id)) + '\',\'rejected\')">❌ رفض</button>' : '') +
+        (!isLocal ? '<button class="btn sm" onclick="acSetComplaintStatus(\'' + esc(String(c.id)) + '\',\'closed\')">📁 إغلاق</button>' : '') +
+        (isLocal ? '<button class="btn sm amber" onclick="acRetryLocalComplaint(\'' + esc(String(c.local_id || c.id)) + '\')">🔄 إرسال للسيرفر</button>' : '') +
+      '</div>' +
+    '</div>';
+
+    // ============ بناء Modal ============
+    var modal = document.createElement('div');
+    modal.id = 'acComplaintModal';
+    modal.className = 'modal open';
+    modal.innerHTML =
+      '<div class="modalbox" style="max-width:720px">' +
+        '<div class="modal-head">' +
+          '<h2 style="margin:0">📢 شكوى #' + esc(shortCid) + '</h2>' +
+          '<button class="btn sm" onclick="document.getElementById(\'acComplaintModal\').remove()">✕</button>' +
+        '</div>' +
+        complaintHTML +
+        clientHTML +
+        orderHTML +
+        techHTML +
+        actionsHTML +
+        '<button class="btn block" style="margin-top:12px" onclick="document.getElementById(\'acComplaintModal\').remove()">إغلاق</button>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e){
+      if(e.target === modal) modal.remove();
+    });
+  };
+
+  // ============================================
+  // 4) تغيير حالة الشكوى
+  // ============================================
+  window.acSetComplaintStatus = async function(id, status){
+    if(!isAdmin()){ Toast.err('يلزم صلاحية الإدارة'); return; }
+    if(!db){ Toast.err('الاتصال بالسيرفر غير متاح'); return; }
+
+    try {
+      var r = await db.from('tech_complaints').update({ status: status }).eq('id', id);
+      if(r.error) throw r.error;
+      Toast.ok('✅ تم تحديث الحالة');
+      document.getElementById('acComplaintModal')?.remove();
+      // أعد تحميل اللوحة
+      setTimeout(function(){
+        if(typeof loadComplaintsForAdmin === 'function') loadComplaintsForAdmin();
+        else if(window.adminProTab) window.adminProTab('complaints');
+      }, 300);
+    } catch(e){
+      LOG.err('Set complaint status:', e);
+      Toast.err('فشل التحديث: ' + (e.message || ''));
+    }
+  };
+
+  // ============================================
+  // 5) Override: loadComplaintsForAdmin مع زر "فتح"
+  // ============================================
+  function patchComplaintsLoad(){
+    if(window.__acComplaintFullPatch) return;
+    window.__acComplaintFullPatch = true;
+
+    // احفظ الأصل
+    var _orig = window.loadComplaintsForAdmin;
+
+    // استبدل الدالة
+    window.loadComplaintsForAdmin = async function(){
+      var el = document.getElementById('adminComplaintsList');
+      if(!el) return;
+
+      el.innerHTML = '<div class="notice info" style="text-align:center">⏳ جارٍ التحميل...</div>';
+
+      var serverList = [];
+      if(db && !DEMO){
+        try {
+          var r = await db.from('tech_complaints').select('*').order('created_at', { ascending: false }).limit(100);
+          if(!r.error && Array.isArray(r.data)) serverList = r.data;
+        } catch(e){ LOG.warn('Load complaints:', e); }
+      }
+
+      var localC = safeRead('my_complaints', []);
+      var localT = safeRead('tech_complaints_local', []);
+      var merged = serverList.slice();
+      var seen = {};
+      serverList.forEach(function(c){ seen[c.id] = 1; });
+      [].concat(localC, localT).forEach(function(c){
+        var k = c.id || c.local_id;
+        if(k && !seen[k]){ seen[k] = 1; merged.push(c); }
+      });
+
+      if(!merged.length){
+        el.innerHTML = '<div class="notice info" style="text-align:center;padding:30px">📭<br>لا توجد شكاوى مسجلة</div>';
+        return;
+      }
+
+      var statusMeta = {
+        pending:   ['⏳', 'قيد الانتظار', '#f59e0b'],
+        reviewing: ['🔍', 'قيد المراجعة', '#3b82f6'],
+        resolved:  ['✅', 'تم الحل', '#10b981'],
+        closed:    ['📁', 'مغلق', '#64748b'],
+        rejected:  ['❌', 'مرفوض', '#ef4444']
+      };
+      var typeLabels = {
+        service:'🔧 خدمة فنية', store:'🛒 طلب متجر', tech:'👷 الفني',
+        billing:'💰 فاتورة', delay:'⏰ تأخير', other:'📝 أخرى',
+        customer:'👤 العميل', company:'🏢 الشركة'
+      };
+
+      el.innerHTML = merged.map(function(c){
+        var meta = statusMeta[c.status] || statusMeta.pending;
+        var typeLabel = typeLabels[c.complaint_type] || typeLabels.other;
+        var cid = c.id ? String(c.id) : (c.local_id || '');
+        var shortCid = cid.slice(-8);
+        var isLocal = !c.id || c
 </body>
 </html>
