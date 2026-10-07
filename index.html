@@ -7664,6 +7664,282 @@ async function loadAdminComplaints(){
   }
 })();
      </script>
+     <script id="ac-clickable-alerts">
+(function(){
+  'use strict';
+
+  // ============================================
+  // 1) Modal تفاصيل الطلب + الفني
+  // ============================================
+  window.acShowOrderWithTech = function(orderId){
+    var orders = (typeof safeRead === 'function') ? safeRead('orders', []) : [];
+    var o = orders.find(function(x){ return String(x.id) === String(orderId); });
+    if(!o){
+      // جرب نجيب من cache الإدارة
+      if(window.adminOrdersCache && Array.isArray(window.adminOrdersCache)){
+        o = window.adminOrdersCache.find(function(x){ return String(x.id) === String(orderId); });
+      }
+    }
+    if(!o){
+      if(window.Toast && Toast.err) Toast.err('الطلب غير موجود');
+      return;
+    }
+
+    var d = o.details || {};
+    var tl = Array.isArray(o.timeline) ? o.timeline : [];
+    var sid = String(o.id);
+    var shortId = sid.slice(-8);
+
+    var statusLabels = {
+      pending:'قيد المراجعة',confirmed:'مؤكد',assigned:'تم تعيين فني',
+      on_way:'الفني في الطريق',arrived:'الفني وصل',
+      report_pending:'التقرير بانتظار الموافقة',report_approved:'تمت الموافقة',
+      paid:'تم الدفع',done:'مكتمل',completed:'مكتمل',cancelled:'ملغي'
+    };
+
+    var serviceLabels = {
+      installation:'تركيب تكييف',uninstall:'فك تكييف',maintenance:'صيانة عامة',
+      periodic:'صيانة دورية',diagnosis:'تشخيص عطل',piping:'تأسيس مواسير',
+      cleaning:'تنظيف وغسيل',gas:'شحن غاز',store:'طلب متجر'
+    };
+
+    var statusLabel = statusLabels[o.status] || o.status || '—';
+    var serviceLabel = serviceLabels[o.service_type] || o.service_type || '—';
+    var isUrgent = d.emergency === true || d.urgency === 'emergency';
+
+    // ===== بيانات الفني =====
+    var techPhone = o.tech_phone || o.assigned_tech_phone || '';
+    var techName = o.tech_name || '';
+    var techInfo = null;
+
+    // لو محتاجين نجيب بيانات الفني من tech_apps
+    if(techPhone && !techName && typeof db !== 'undefined' && db && !DEMO){
+      // حاول نجيب بشكل async بعدين
+    }
+
+    var techHTML = '';
+    if(techPhone){
+      var techLabel = techName ? ('👷 ' + techName) : '👷 الفني';
+      var wp = String(techPhone).replace(/[^0-9]/g,'').replace(/^0/, '20');
+      techHTML =
+        '<div class="card" style="padding:12px;margin-top:10px;border:2px solid #8b5cf6;background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(139,92,246,.02))">' +
+          '<h3 style="margin:0 0 10px 0;color:#c4b5fd">' + techLabel + '</h3>' +
+          '<div class="info-row" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">الاسم</span><b>' + esc(techName || '—') + '</b></div>' +
+          '<div class="info-row" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">الهاتف</span><b style="direction:ltr">' + esc(techPhone) + '</b></div>' +
+          (o.assignment_status ? '<div class="info-row" style="display:flex;justify-content:space-between;padding:6px 0"><span class="muted">حالة التعيين</span><b>' + esc(o.assignment_status) + '</b></div>' : '') +
+          '<div class="row" style="gap:6px;margin-top:12px;flex-wrap:wrap">' +
+            '<a class="btn sm" href="tel:' + esc(techPhone) + '" style="flex:1;min-width:100px;text-align:center;text-decoration:none">📞 اتصال</a>' +
+            '<a class="btn sm green" href="https://wa.me/' + wp + '?text=' + encodeURIComponent('مرحباً ' + (techName || '') + '، بخصوص الطلب #' + shortId) + '" target="_blank" rel="noopener" style="flex:1;min-width:100px;text-align:center;text-decoration:none">💬 واتساب</a>' +
+            (typeof window.acOpenTechDetails === 'function'
+              ? '<button class="btn sm" style="flex:1;min-width:100px;background:#0c4a6e;color:#cffafe" onclick="acOpenTechDetails(\'' + esc(techPhone) + '\')">👁️ ملف الفني</button>'
+              : '') +
+            (typeof window.acOpenLiveTracking === 'function'
+              ? '<button class="btn sm" style="flex:1;min-width:100px;background:#0c4a6e;color:#cffafe" onclick="acOpenLiveTracking(\'' + esc(sid) + '\')">🗺️ تتبع حي</button>'
+              : '') +
+          '</div>' +
+        '</div>';
+    } else {
+      techHTML =
+        '<div class="card" style="padding:12px;margin-top:10px;border:2px dashed #f59e0b;background:rgba(245,158,11,.05)">' +
+          '<div style="text-align:center;color:#fbbf24">' +
+            '<div style="font-size:28px;margin-bottom:6px">👷</div>' +
+            '<b>لا يوجد فني معين بعد</b>' +
+            '<p class="muted-sm" style="margin:6px 0 0">هذا الطلب لسه محتاج تعيين فني</p>' +
+          '</div>' +
+        '</div>';
+    }
+
+    // ===== بيانات العميل =====
+    var clientHTML =
+      '<div class="card" style="padding:12px;margin-top:10px">' +
+        '<h3 style="margin:0 0 10px 0">👤 بيانات العميل</h3>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">الاسم</span><b>' + esc(o.client_name || d.name || '—') + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">الهاتف</span><b style="direction:ltr">' + esc(d.phone || '—') + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0"><span class="muted">المدينة</span><b>' + esc(d.city || '—') + '</b></div>' +
+      '</div>';
+
+    // ===== بيانات الطلب =====
+    var orderHTML =
+      '<div class="card" style="padding:12px;margin-top:10px">' +
+        '<h3 style="margin:0 0 10px 0">📋 بيانات الطلب</h3>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">رقم الطلب</span><b>#' + esc(shortId) + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">الخدمة</span><b>' + esc(serviceLabel) + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">الحالة</span><b>' + esc(statusLabel) + '</b></div>' +
+        (o.total_amount ? '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">الإجمالي</span><b style="color:#67e8f9">' + Number(o.total_amount).toLocaleString('ar-EG') + ' ج.م</b></div>' : '') +
+        (d.bookingDate ? '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="muted">الموعد</span><b>' + esc(d.bookingDate) + ' ' + esc(d.bookingTime || '') + '</b></div>' : '') +
+        (d.address ? '<div style="padding:8px 0;border-top:1px solid var(--border);margin-top:6px"><span class="muted">📍 العنوان:</span><div style="margin-top:4px">' + esc(d.address) + '</div></div>' : '') +
+        (d.problem ? '<div style="padding:8px 0;border-top:1px solid var(--border)"><span class="muted">🔍 المشكلة:</span><div style="margin-top:4px">' + esc(d.problem) + '</div></div>' : '') +
+        (isUrgent ? '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px;margin-top:8px;text-align:center;color:#fca5a5;font-weight:900">🚨 طلب طوارئ</div>' : '') +
+      '</div>';
+
+    // ===== Timeline =====
+    var tlHTML = '';
+    if(tl.length){
+      tlHTML = '<div class="card" style="padding:12px;margin-top:10px"><h3 style="margin:0 0 10px 0">📅 سجل الطلب</h3><div class="admin-timeline">' +
+        tl.map(function(x){
+          var t = x.at ? new Date(x.at).toLocaleString('ar-EG') : '';
+          return '<div class="admin-timeline-item"><b>' + esc(statusLabels[x.status] || x.status) + '</b><br><span class="muted-sm">' + t + '</span></div>';
+        }).join('') +
+      '</div></div>';
+    }
+
+    // ===== أزرار الإجراءات =====
+    var actionsHTML =
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">' +
+        (typeof window.adminSetStatus === 'function'
+          ? ['confirmed','assigned','on_way','arrived','completed','cancelled'].map(function(s){
+              return '<button class="btn sm" onclick="adminSetStatus(\'' + esc(sid) + '\',\'' + s + '\',this)">' + (statusLabels[s] || s) + '</button>';
+            }).join('')
+          : '') +
+        (!['done','completed','cancelled'].includes(o.status) && typeof window.adminCancelOrder === 'function'
+          ? '<button class="btn sm red" onclick="adminCancelOrder(\'' + esc(sid) + '\')">❌ إلغاء</button>'
+          : '') +
+      '</div>';
+
+    // ===== بناء الـ Modal =====
+    var existing = document.getElementById('acOrderTechModal');
+    if(existing) existing.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'acOrderTechModal';
+    modal.className = 'modal open';
+    modal.innerHTML =
+      '<div class="modalbox" style="max-width:640px">' +
+        '<div class="modal-head">' +
+          '<h2 style="margin:0">📋 الطلب #' + esc(shortId) + '</h2>' +
+          '<button class="btn sm" onclick="document.getElementById(\'acOrderTechModal\').remove()">✕</button>' +
+        '</div>' +
+        techHTML +
+        clientHTML +
+        orderHTML +
+        tlHTML +
+        actionsHTML +
+        '<button class="btn block" style="margin-top:12px" onclick="document.getElementById(\'acOrderTechModal\').remove()">إغلاق</button>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e){
+      if(e.target === modal) modal.remove();
+    });
+
+    // جرب نجيب بيانات الفني من tech_apps
+    if(techPhone && !techName && typeof db !== 'undefined' && db && !DEMO){
+      db.from('tech_apps').select('name,city,availability,current_lat,current_lng,last_seen').eq('phone', techPhone).maybeSingle()
+        .then(function(r){
+          if(r.data){
+            var techCard = modal.querySelector('.card h3');
+            if(techCard && techCard.textContent.indexOf('الفني') !== -1){
+              var t2 = r.data;
+              var newTitle = '👷 ' + (t2.name || 'الفني');
+              techCard.textContent = newTitle;
+              // حدّث الاسم في الجدول
+              var rows = techCard.parentElement.querySelectorAll('b');
+              if(rows[0]) rows[0].textContent = t2.name || '—';
+              // ضيف حالة التوفر
+              if(t2.availability){
+                var availMap = { available: '🟢 متاح', busy: '🟡 مشغول', offline: '⚪ غير متصل' };
+                var extra = document.createElement('div');
+                extra.style = 'display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);margin-top:6px';
+                extra.innerHTML = '<span class="muted">حالة الفني</span><b>' + (availMap[t2.availability] || t2.availability) + '</b>';
+                techCard.parentElement.appendChild(extra);
+              }
+            }
+          }
+        })
+        .catch(function(){});
+    }
+  };
+
+  // ============================================
+  // 2) اربط التنبيهات بأزرار
+  // ============================================
+  function makeAlertsClickable(){
+    var container = document.getElementById('adminProContent');
+    if(!container) return;
+
+    var alerts = container.querySelectorAll('.admin-alert');
+    alerts.forEach(function(el){
+      if(el.dataset.acClickable === '1') return;
+
+      // حاول نطلع الـ order id من النص
+      var txt = el.textContent || '';
+      var m = txt.match(/طلب\s+([a-zA-Z0-9_-]+)/);
+      var orderId = m ? m[1].trim() : null;
+
+      // بديل: ابحث عن b element جواه
+      if(!orderId){
+        var b = el.querySelector('b');
+        if(b) orderId = b.textContent.trim();
+      }
+
+      if(!orderId) return;
+
+      el.dataset.acClickable = '1';
+      el.dataset.acOrderId = orderId;
+      el.style.cursor = 'pointer';
+      el.style.transition = 'all .2s';
+      el.title = 'اضغط لعرض التفاصيل';
+
+      // hover effect
+      el.addEventListener('mouseenter', function(){ el.style.transform = 'translateX(-2px)'; el.style.filter = 'brightness(1.15)'; });
+      el.addEventListener('mouseleave', function(){ el.style.transform = ''; el.style.filter = ''; });
+
+      el.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        window.acShowOrderWithTech(orderId);
+      });
+
+      // ضيف سهم في النهاية
+      if(!el.querySelector('.ac-alert-arrow')){
+        var arrow = document.createElement('span');
+        arrow.className = 'ac-alert-arrow';
+        arrow.textContent = ' ‹';
+        arrow.style = 'float:left;color:#fbbf24;font-weight:900';
+        el.appendChild(arrow);
+      }
+    });
+  }
+
+  // ============================================
+  // 3) راقب DOM عشان نحدّث لما يدخل الأدمن للوحة
+  // ============================================
+  var observer = null;
+  function startObserving(){
+    var target = document.getElementById('adminProContent');
+    if(!target){
+      setTimeout(startObserving, 500);
+      return;
+    }
+    if(observer) observer.disconnect();
+    observer = new MutationObserver(function(){
+      setTimeout(makeAlertsClickable, 150);
+    });
+    observer.observe(target, { childList: true, subtree: true });
+    makeAlertsClickable();
+  }
+
+  // ============================================
+  // 4) تشغيل
+  // ============================================
+  if(typeof registerRenderHook === 'function'){
+    registerRenderHook(function(){
+      if(typeof state !== 'undefined' && state.page === 'admin'){
+        startObserving();
+      }
+    });
+  }
+
+  // شغل فوراً لو إحنا في لوحة الأدمن
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(startObserving, 1200); });
+  } else {
+    setTimeout(startObserving, 1200);
+  }
+
+  console.log('[HVAC] 🖱️ Clickable alerts ready');
+})();
+     </script>
      
 </body>
 </html>
