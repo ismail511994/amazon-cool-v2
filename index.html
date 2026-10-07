@@ -7940,6 +7940,449 @@ async function loadAdminComplaints(){
   console.log('[HVAC] 🖱️ Clickable alerts ready');
 })();
      </script>
+     <script id="ac-complaints-sync-fix">
+(function(){
+  'use strict';
+
+  // ============================================
+  // 1) طابور المزامنة
+  // ============================================
+  var QUEUE_KEY = 'complaints_sync_queue_v1';
+
+  function getQueue(){
+    try { return safeRead(QUEUE_KEY, []) || []; } catch(e){ return []; }
+  }
+  function saveQueue(q){
+    try { safeWrite(QUEUE_KEY, (q||[]).slice(0, 50)); } catch(e){}
+  }
+  function addToQueue(complaint){
+    var q = getQueue();
+    q.push(complaint);
+    saveQueue(q);
+  }
+  function removeFromQueue(id){
+    var q = getQueue().filter(function(c){ return c.local_id !== id; });
+    saveQueue(q);
+  }
+
+  // ============================================
+  // 2) محاولة إرسال شكوى (مع كل الاحتمالات)
+  // ============================================
+  async function trySyncComplaint(c){
+    if(!db || DEMO) return { ok:false, reason:'no-db' };
+
+    // احتمال 1: أعمدة كاملة
+    try {
+      var r1 = await db.from('tech_complaints').insert({
+        client_id: c.client_id,
+        client_name: c.client_name,
+        phone: c.phone,
+        complaint_type: c.complaint_type,
+        order_ref: c.order_ref,
+        complaint: c.complaint,
+        status: 'pending'
+      });
+      if(!r1.error) return { ok:true, field:'full' };
+      LOG.warn('Complaint insert [full] failed:', r1.error.message);
+    } catch(e){ LOG.warn('Full insert exception:', e); }
+
+    // احتمال 2: أعمدة أساسية فقط
+    try {
+      var r2 = await db.from('tech_complaints').insert({
+        client_name: c.client_name,
+        phone: c.phone,
+        complaint: c.complaint,
+        status: 'pending'
+      });
+      if(!r2.error) return { ok:true, field:'minimal' };
+      LOG.warn('Complaint insert [minimal] failed:', r2.error.message);
+    } catch(e){ LOG.warn('Minimal insert exception:', e); }
+
+    // احتمال 3: اسم العمود message بدل complaint
+    try {
+      var r3 = await db.from('tech_complaints').insert({
+        client_name: c.client_name,
+        phone: c.phone,
+        message: c.complaint,
+        status: 'pending'
+      });
+      if(!r3.error) return { ok:true, field:'message' };
+      LOG.warn('Complaint insert [message] failed:', r3.error.message);
+    } catch(e){ LOG.warn('Message insert exception:', e); }
+
+    // احتمال 4: تقرير فقط
+    try {
+      var r4 = await db.from('tech_complaints').insert({
+        complaint: c.complaint,
+        status: 'pending'
+      });
+      if(!r4.error) return { ok:true, field:'bare' };
+      LOG.warn('Complaint insert [bare] failed:', r4.error.message);
+    } catch(e){ LOG.warn('Bare insert exception:', e); }
+
+    return { ok:false, reason:'all-attempts-failed' };
+  }
+
+  // ============================================
+  // 3) اعادة المحاولة للطابور
+  // ============================================
+  var _syncing = false;
+  async function syncQueue(){
+    if(_syncing) return;
+    if(!db || DEMO) return;
+    var q = getQueue();
+    if(!q.length) return;
+    _syncing = true;
+    try {
+      for(var i=0; i<q.length; i++){
+        var c = q[i];
+        var res = await trySyncComplaint(c);
+        if(res.ok){
+          removeFromQueue(c.local_id);
+          LOG.ok('Complaint synced (retry):', c.local_id, res.field);
+        }
+      }
+    } catch(e){
+      LOG.warn('Sync queue error:', e);
+    } finally {
+      _syncing = false;
+    }
+  }
+
+  // ============================================
+  // 4) Override: استبدل دالة إرسال الشكوى
+  // ============================================
+  window.acSubmitComplaint = async function(){
+    if(!state.user){ openAuth(); return; }
+    if(safeRead('complaint_submit_lock', false)){ Toast.err('جاري الإرسال...'); return; }
+    safeWrite('complaint_submit_lock', true);
+
+    try {
+      var type = document.getElementById('acComplaintType')?.value || 'other';
+      var order = (document.getElementById('acComplaintOrder')?.value || '').trim();
+      var desc = (document.getElementById('acComplaintDesc')?.value || '').trim();
+      var phoneInput = (document.getElementById('acComplaintPhone')?.value || '').trim();
+
+      if(!desc || desc.length < 10){
+        Toast.err('اكتب وصف واضح للشكوى (10 أحرف على الأقل)');
+        return;
+      }
+
+      var localId = 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+      var complaint = {
+        local_id: localId,
+        client_id: state.user.id,
+        client_name: (state.profile && state.profile.full_name) || state.user.email || 'عميل',
+        phone: phoneInput || (state.profile && state.profile.phone) || '',
+        complaint_type: type,
+        order_ref: order || null,
+        complaint: desc,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      };
+
+      // 1. احفظ محلياً أول
+      var local = safeRead('my_complaints', []);
+      complaint.id = localId;
+      local.unshift(complaint);
+      safeWrite('my_complaints', local.slice(0, 50));
+
+      // 2. حاول التزامن
+      var syncResult = { ok:false };
+      try { syncResult = await trySyncComplaint(complaint); } catch(e){}
+
+      // 3. لو نجح → احذف من الطابور. لو فشل → أضفه للطابور
+      if(syncResult.ok){
+        complaint.synced = true;
+        LOG.ok('Complaint synced on first try');
+        Toast.ok('✅ تم إرسال الشكوى بنجاح');
+      } else {
+        complaint.synced = false;
+        addToQueue(complaint);
+        LOG.warn('Complaint added to sync queue');
+        Toast.warn('⚠️ تم حفظ الشكوى — جاري المزامنة...');
+      }
+
+      // 4. امسح الحقول
+      var dEl = document.getElementById('acComplaintDesc'); if(dEl) dEl.value = '';
+      var oEl = document.getElementById('acComplaintOrder'); if(oEl) oEl.value = '';
+
+      // 5. حدّث القائمة
+      await acLoadMyComplaints();
+
+    } catch(e){
+      LOG.err('Complaint submit error:', e);
+      Toast.err('تعذر الإرسال: ' + (e.message || ''));
+    } finally {
+      safeRemove('complaint_submit_lock');
+    }
+  };
+
+  // ============================================
+  // 5) Override: تحميل الشكاوى مع إظهار حالة المزامنة
+  // ============================================
+  window.acLoadMyComplaints = async function(){
+    var el = document.getElementById('acComplaintList');
+    if(!el || !state.user) return;
+
+    el.innerHTML = '<div class="notice info" style="text-align:center">⏳ جارٍ التحميل...</div>';
+
+    var serverList = [];
+    // 1. جرب Supabase
+    if(!DEMO && db){
+      try {
+        var r = await db.from('tech_complaints')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(30);
+        if(!r.error && Array.isArray(r.data)){
+          // فلتر اللي يخص العميل
+          serverList = r.data.filter(function(c){
+            return c.client_id === state.user.id ||
+                   (c.phone && state.profile && state.profile.phone && c.phone === state.profile.phone) ||
+                   (c.client_name && state.profile && state.profile.full_name && c.client_name === state.profile.full_name);
+          });
+        }
+      } catch(e){ LOG.warn('Load complaints:', e); }
+    }
+
+    // 2. اجمع مع المحلي
+    var local = safeRead('my_complaints', []);
+    var merged = [];
+    var seen = {};
+
+    // الأولوية للسيرفر
+    serverList.forEach(function(c){
+      var key = c.id || c.created_at;
+      if(!seen[key]){ seen[key] = 1; merged.push(c); }
+    });
+    // بعدين المحلي
+    local.forEach(function(c){
+      var key = c.id || c.local_id || c.created_at;
+      if(!seen[key]){ seen[key] = 1; merged.push(c); }
+    });
+
+    // رتب بالتاريخ
+    merged.sort(function(a,b){ return new Date(b.created_at||0) - new Date(a.created_at||0); });
+
+    if(!merged.length){
+      el.innerHTML = '<div class="notice info" style="text-align:center;padding:30px">📭<br>لا توجد شكاوى سابقة</div>';
+      return;
+    }
+
+    var statusMeta = {
+      pending:   ['⏳', 'قيد الانتظار', '#f59e0b'],
+      reviewing: ['🔍', 'قيد المراجعة', '#3b82f6'],
+      resolved:  ['✅', 'تم الحل', '#10b981'],
+      closed:    ['📁', 'مغلق', '#64748b'],
+      rejected:  ['❌', 'مرفوض', '#ef4444']
+    };
+    var typeLabels = {
+      service:'🔧 خدمة فنية', store:'🛒 طلب متجر', tech:'👷 الفني',
+      billing:'💰 فاتورة', delay:'⏰ تأخير', other:'📝 أخرى',
+      customer:'👤 العميل', company:'🏢 الشركة'
+    };
+
+    el.innerHTML = '<h3 style="margin:16px 0 8px">📋 شكاواي السابقة (' + merged.length + ')</h3>' +
+      merged.map(function(c){
+        var meta = statusMeta[c.status] || statusMeta.pending;
+        var typeLabel = typeLabels[c.complaint_type] || typeLabels.other;
+        var cid = c.id ? '#' + String(c.id).slice(-8) : '—';
+        var isSynced = c.synced !== false && !c.local_id; // لو جاي من السيرفر
+        var syncBadge = '';
+        if(c.local_id && c.synced === false){
+          syncBadge = '<span class="pill" style="background:#78350f;color:#fef3c7;font-size:9px;margin-right:6px">⏳ قيد المزامنة</span>';
+        }
+        return '<div class="card" style="margin:8px 0">' +
+          '<div class="row between" style="align-items:flex-start">' +
+            '<div>' +
+              '<b>' + cid + '</b> ' + syncBadge +
+              '<div class="muted-sm" style="margin-top:3px">' + typeLabel + (c.order_ref ? ' — طلب: ' + esc(c.order_ref) : '') + '</div>' +
+            '</div>' +
+            '<span class="pill" style="background:' + meta[2] + ';color:#fff;white-space:nowrap">' + meta[0] + ' ' + meta[1] + '</span>' +
+          '</div>' +
+          '<div style="margin-top:10px;font-size:13px;line-height:1.7;color:#cbd5e1">' + esc(c.complaint || c.message || '') + '</div>' +
+          '<div class="muted-sm" style="margin-top:8px">📅 ' + formatDate(c.created_at) + '</div>' +
+        '</div>';
+      }).join('');
+  };
+
+  // ============================================
+  // 6) إصلاح تحميل الشكاوى في لوحة الأدمن
+  // ============================================
+  async function loadComplaintsForAdmin(){
+    var el = document.getElementById('adminComplaintsList');
+    if(!el) return;
+
+    el.innerHTML = '<div class="notice info">⏳ جارٍ تحميل الشكاوى...</div>';
+
+    var serverList = [];
+    var usedFields = null;
+
+    // جرب كل الأعمدة الممكنة
+    if(db && !DEMO){
+      // محاولة 1
+      try {
+        var r1 = await db.from('tech_complaints').select('*').order('created_at', { ascending: false }).limit(100);
+        if(!r1.error && Array.isArray(r1.data)){
+          serverList = r1.data;
+          LOG.ok('Admin: loaded ' + r1.data.length + ' complaints from server');
+        } else if(r1.error){
+          LOG.warn('Admin complaints load [attempt 1]:', r1.error.message);
+        }
+      } catch(e){}
+
+      // لو فشل، جرب بدون order
+      if(!serverList.length){
+        try {
+          var r2 = await db.from('tech_complaints').select('*').limit(100);
+          if(!r2.error && Array.isArray(r2.data)){
+            serverList = r2.data;
+          }
+        } catch(e){}
+      }
+    }
+
+    // اجمع مع المحلي
+    var localC = safeRead('my_complaints', []);
+    var localT = safeRead('tech_complaints_local', []);
+    var queue = getQueue();
+    var allLocal = [].concat(localC, localT, queue);
+
+    var merged = serverList.slice();
+    var seen = {};
+    serverList.forEach(function(c){ seen[c.id || c.created_at] = 1; });
+    allLocal.forEach(function(c){
+      var k = c.id || c.local_id || c.created_at;
+      if(!seen[k]){ seen[k] = 1; merged.push(c); }
+    });
+
+    if(!merged.length){
+      el.innerHTML =
+        '<div class="notice info" style="text-align:center;padding:30px">' +
+          '📭<br>لا توجد شكاوى مسجلة' +
+          '<div style="margin-top:12px;font-size:11px;color:#94a3b8">' +
+            'إذا وصلتك شكوى ولا تظهر هنا، اضغط تحديث في الأعلى' +
+          '</div>' +
+        '</div>';
+      return;
+    }
+
+    var statusMeta = {
+      pending:   ['⏳', 'قيد الانتظار', '#f59e0b'],
+      reviewing: ['🔍', 'قيد المراجعة', '#3b82f6'],
+      resolved:  ['✅', 'تم الحل', '#10b981'],
+      closed:    ['📁', 'مغلق', '#64748b'],
+      rejected:  ['❌', 'مرفوض', '#ef4444']
+    };
+    var typeLabels = {
+      service:'🔧 خدمة فنية', store:'🛒 طلب متجر', tech:'👷 الفني',
+      billing:'💰 فاتورة', delay:'⏰ تأخير', other:'📝 أخرى',
+      customer:'👤 العميل', company:'🏢 الشركة'
+    };
+
+    el.innerHTML = merged.map(function(c){
+      var meta = statusMeta[c.status] || statusMeta.pending;
+      var typeLabel = typeLabels[c.complaint_type] || typeLabels.other;
+      var cid = c.id ? String(c.id) : (c.local_id || '—');
+      var isLocal = !!c.local_id && !c.id;
+      var body = c.complaint || c.message || c.reason || c.description || '—';
+      var who = c.client_name || c.tech_name || c.phone || 'مجهول';
+
+      return '<div class="admin-pro-card" style="margin-top:10px;' + (isLocal ? 'border:1px dashed #78350f;' : '') + '">' +
+        '<div class="row between">' +
+          '<strong>📢 شكوى #' + esc(String(cid).slice(-8)) + (isLocal ? ' <span style="font-size:9px;color:#fbbf24">(محلي)</span>' : '') + '</strong>' +
+          '<span class="badge" style="background:' + meta[2] + ';color:#fff">' + meta[0] + ' ' + meta[1] + '</span>' +
+        '</div>' +
+        '<div class="muted-sm" style="margin-top:6px">' +
+          'من: <b>' + esc(who) + '</b>' +
+          (c.phone ? ' — 📞 ' + esc(c.phone) : '') +
+          (c.tech_phone ? ' — 👷 ' + esc(c.tech_phone) : '') +
+        '</div>' +
+        '<div class="muted-sm" style="margin-top:2px">' + typeLabel + (c.order_ref ? ' — طلب: ' + esc(c.order_ref) : '') + '</div>' +
+        '<div style="margin-top:8px;padding:8px;background:rgba(0,0,0,.2);border-radius:8px">' + esc(body) + '</div>' +
+        '<div class="muted-sm" style="margin-top:6px">📅 ' + (c.created_at ? formatDate(c.created_at) : '—') + '</div>' +
+        '<div class="row" style="gap:6px;margin-top:10px">' +
+          (!isLocal ? '<button class="btn sm" onclick="adminComplaintStatus(\'' + esc(cid) + '\',\'reviewing\')">قيد المراجعة</button>' : '') +
+          (!isLocal ? '<button class="btn sm green" onclick="adminComplaintStatus(\'' + esc(cid) + '\',\'resolved\')">تم الحل</button>' : '') +
+          (!isLocal ? '<button class="btn sm" onclick="adminComplaintStatus(\'' + esc(cid) + '\',\'closed\')">إغلاق</button>' : '') +
+          (isLocal ? '<button class="btn sm amber" onclick="acRetryLocalComplaint(\'' + esc(cid) + '\')">🔄 إعادة إرسال للسيرفر</button>' : '') +
+          (c.phone ? '<a class="btn sm" href="tel:' + esc(c.phone) + '">📞 اتصال</a>' : '') +
+          (c.phone ? '<a class="btn sm green" href="https://wa.me/' + String(c.phone).replace(/[^0-9]/g,'').replace(/^0/,'20') + '" target="_blank">💬 واتساب</a>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ============================================
+  // 7) إعادة إرسال شكوى محلية
+  // ============================================
+  window.acRetryLocalComplaint = async function(localId){
+    var all = [].concat(safeRead('my_complaints', []), getQueue());
+    var c = all.find(function(x){ return (x.id === localId) || (x.local_id === localId); });
+    if(!c){ Toast.err('الشكوى غير موجودة'); return; }
+
+    Toast.info('⏳ جارٍ الإرسال...');
+    var res = await trySyncComplaint(c);
+
+    if(res.ok){
+      // امسح من الطابور والمحلي
+      removeFromQueue(localId);
+      var local = safeRead('my_complaints', []).filter(function(x){
+        return x.id !== localId && x.local_id !== localId;
+      });
+      safeWrite('my_complaints', local);
+      Toast.ok('✅ تم الإرسال للسيرفر');
+      loadComplaintsForAdmin();
+    } else {
+      Toast.err('❌ فشل الإرسال — تحقق من اتصال الإنترنت أو صلاحيات الجدول');
+      LOG.warn('Complaint retry failed for:', localId);
+    }
+  };
+
+  // ============================================
+  // 8) اربط دالة الأدمن
+  // ============================================
+  // بعد ما الأدمن يضغط على "الشكاوى"، نستخدم الدالة الجديدة
+  function overrideAdminLoad(){
+    if(!window.adminProTab) return;
+    if(window.adminProTab.__acComplaintsFix) return;
+
+    var _orig = window.adminProTab;
+    window.adminProTab = function(tab){
+      var result = _orig.apply(this, arguments);
+      if(tab === 'complaints'){
+        setTimeout(loadComplaintsForAdmin, 100);
+      }
+      return result;
+    };
+    window.adminProTab.__acComplaintsFix = true;
+  }
+
+  // ============================================
+  // 9) التشغيل
+  // ============================================
+  function boot(){
+    overrideAdminLoad();
+    // حاول مزامنة الطابور عند الدخول
+    setTimeout(syncQueue, 3000);
+    // وكل 30 ثانية
+    setInterval(syncQueue, 30000);
+    // عند رجوع التاب
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') setTimeout(syncQueue, 1500);
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(boot, 800); });
+  } else {
+    setTimeout(boot, 800);
+  }
+
+  console.log('[HVAC] 🔄 Complaints sync fix ready');
+})();
+     </script>
      
 </body>
 </html>
