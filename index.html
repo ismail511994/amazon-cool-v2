@@ -7354,6 +7354,316 @@ async function loadAdminComplaints(){
   console.log('[HVAC] 🔙 Back button fix ready');
 })();
      </script>
+     <script id="ac-complaints-system">
+(function(){
+  'use strict';
+
+  // ============ صفحة الشكاوى ============
+  window.pages = window.pages || {};
+  window.pages.complaints = function(){
+    if(!state.user){
+      return '<h2>📢 الشكاوى</h2>'+
+        '<div class="card" style="text-align:center;padding:30px">'+
+          '<div style="font-size:48px;margin-bottom:10px">🔐</div>'+
+          '<p class="muted" style="margin:0 0 16px">سجّل الدخول لتقديم شكوى</p>'+
+          '<button class="btn primary" onclick="openAuth()">تسجيل الدخول</button>'+
+        '</div>';
+    }
+    return '<h2>📢 الشكاوى</h2>'+
+      '<div class="notice info">شكاواك بتوصل لإدارة الشركة مباشرة، والرد خلال 48 ساعة.</div>'+
+      '<div class="card">'+
+        '<h3 style="margin-bottom:12px">✏️ تقديم شكوى جديدة</h3>'+
+        '<div class="field">'+
+          '<label>نوع الشكوى <span class="req">*</span></label>'+
+          '<select id="acComplaintType">'+
+            '<option value="service">🔧 خدمة فنية</option>'+
+            '<option value="store">🛒 طلب متجر</option>'+
+            '<option value="tech">👷 الفني</option>'+
+            '<option value="billing">💰 الفاتورة / الدفع</option>'+
+            '<option value="delay">⏰ تأخير</option>'+
+            '<option value="other">📝 أخرى</option>'+
+          '</select>'+
+        '</div>'+
+        '<div class="field">'+
+          '<label>رقم الطلب (اختياري)</label>'+
+          '<input id="acComplaintOrder" placeholder="مثال: #A7B2C3D4">'+
+        '</div>'+
+        '<div class="field">'+
+          '<label>تفاصيل الشكوى <span class="req">*</span></label>'+
+          '<textarea id="acComplaintDesc" placeholder="اشرح المشكلة بالتفصيل (10 أحرف على الأقل)..." style="min-height:100px"></textarea>'+
+        '</div>'+
+        '<div class="field">'+
+          '<label>رقم الموبايل للتواصل (اختياري)</label>'+
+          '<input id="acComplaintPhone" type="tel" placeholder="01xxxxxxxxx">'+
+        '</div>'+
+        '<button class="btn primary block" style="padding:14px" onclick="acSubmitComplaint()">📤 إرسال الشكوى</button>'+
+      '</div>'+
+      '<div id="acComplaintList"></div>';
+  };
+
+  // ============ إرسال شكوى ============
+  window.acSubmitComplaint = async function(){
+    if(!state.user){ openAuth(); return; }
+    if(safeRead('complaint_submit_lock', false)){ Toast.err('جاري الإرسال...'); return; }
+    safeWrite('complaint_submit_lock', true);
+
+    try {
+      var type = document.getElementById('acComplaintType')?.value || 'other';
+      var order = (document.getElementById('acComplaintOrder')?.value || '').trim();
+      var desc = (document.getElementById('acComplaintDesc')?.value || '').trim();
+      var phoneInput = (document.getElementById('acComplaintPhone')?.value || '').trim();
+
+      if(!desc || desc.length < 10){
+        Toast.err('اكتب وصف واضح للشكوى (10 أحرف على الأقل)');
+        return;
+      }
+
+      var complaint = {
+        client_id: state.user.id,
+        client_name: (state.profile && state.profile.full_name) || state.user.email,
+        phone: phoneInput || (state.profile && state.profile.phone) || '',
+        complaint_type: type,
+        order_ref: order || null,
+        complaint: desc,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      };
+
+      // 1. احفظ محلياً أول (دائماً)
+      var local = safeRead('my_complaints', []);
+      complaint.id = 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+      local.unshift(complaint);
+      safeWrite('my_complaints', local.slice(0, 50));
+
+      // 2. حاول تزامن مع Supabase
+      var synced = false;
+      if(!DEMO && db){
+        try {
+          var r = await db.from('tech_complaints').insert({
+            client_id: complaint.client_id,
+            client_name: complaint.client_name,
+            phone: complaint.phone,
+            complaint_type: complaint.complaint_type,
+            order_ref: complaint.order_ref,
+            complaint: complaint.complaint,
+            status: 'pending'
+          });
+          if(r.error){
+            LOG.warn('Complaint sync error:', r.error.message);
+          } else {
+            synced = true;
+            LOG.ok('Complaint synced to server');
+          }
+        } catch(e){
+          LOG.warn('Complaint sync exception:', e);
+        }
+      }
+
+      // 3. امسح الحقول
+      var dEl = document.getElementById('acComplaintDesc'); if(dEl) dEl.value = '';
+      var oEl = document.getElementById('acComplaintOrder'); if(oEl) oEl.value = '';
+
+      Toast.ok(synced ? '✅ تم إرسال شكوتك (تم الحفظ)' : '✅ تم إرسال شكوتك (سيتم المزامنة قريباً)');
+
+      // 4. حدّث القائمة
+      await acLoadMyComplaints();
+
+    } catch(e){
+      LOG.err('Complaint submit error:', e);
+      Toast.err('تعذر إرسال الشكوى: ' + (e.message || ''));
+    } finally {
+      safeRemove('complaint_submit_lock');
+    }
+  };
+
+  // ============ تحميل شكاواي ============
+  window.acLoadMyComplaints = async function(){
+    var el = document.getElementById('acComplaintList');
+    if(!el || !state.user) return;
+
+    el.innerHTML = '<div class="notice info" style="text-align:center">⏳ جارٍ التحميل...</div>';
+
+    var list = [];
+
+    // 1. جرب Supabase
+    if(!DEMO && db){
+      try {
+        var r = await db.from('tech_complaints')
+          .select('*')
+          .eq('client_id', state.user.id)
+          .order('created_at', { ascending: false })
+          .limit(30);
+        if(!r.error && Array.isArray(r.data)){
+          list = r.data;
+        }
+      } catch(e){ LOG.warn('Load complaints:', e); }
+    }
+
+    // 2. إذا فاضي — استخدم اللي محلي
+    if(!list.length){
+      list = safeRead('my_complaints', []);
+    }
+
+    if(!list.length){
+      el.innerHTML = '<div class="notice info" style="text-align:center;padding:30px">📭<br>لا توجد شكاوى سابقة</div>';
+      return;
+    }
+
+    var statusMeta = {
+      pending:   ['⏳', 'قيد الانتظار', '#f59e0b'],
+      reviewing: ['🔍', 'قيد المراجعة', '#3b82f6'],
+      resolved:  ['✅', 'تم الحل', '#10b981'],
+      closed:    ['📁', 'مغلق', '#64748b'],
+      rejected:  ['❌', 'مرفوض', '#ef4444']
+    };
+
+    var typeLabels = {
+      service: '🔧 خدمة فنية',
+      store: '🛒 طلب متجر',
+      tech: '👷 الفني',
+      billing: '💰 فاتورة',
+      delay: '⏰ تأخير',
+      other: '📝 أخرى'
+    };
+
+    el.innerHTML = '<h3 style="margin:16px 0 8px">📋 شكاواي السابقة (' + list.length + ')</h3>' +
+      list.map(function(c){
+        var meta = statusMeta[c.status] || statusMeta.pending;
+        var typeLabel = typeLabels[c.complaint_type] || typeLabels.other;
+        var cid = c.id ? '#' + String(c.id).slice(-8) : '—';
+        return '<div class="card" style="margin:8px 0">' +
+          '<div class="row between" style="align-items:flex-start">' +
+            '<div>' +
+              '<b>' + cid + '</b>' +
+              '<div class="muted-sm" style="margin-top:3px">' + typeLabel + (c.order_ref ? ' — طلب: ' + esc(c.order_ref) : '') + '</div>' +
+            '</div>' +
+            '<span class="pill" style="background:' + meta[2] + ';color:#fff;white-space:nowrap">' + meta[0] + ' ' + meta[1] + '</span>' +
+          '</div>' +
+          '<div style="margin-top:10px;font-size:13px;line-height:1.7;color:#cbd5e1">' + esc(c.complaint || '') + '</div>' +
+          '<div class="muted-sm" style="margin-top:8px">📅 ' + formatDate(c.created_at) + '</div>' +
+        '</div>';
+      }).join('');
+  };
+
+  // ============ زر الشكاوى في صفحة "حسابي" ============
+  function patchProfile(){
+    var _orig = window.pages && window.pages.profile;
+    if(!_orig || _orig.__acComplaintsPatch) return;
+    var _new = function(){
+      var html = _orig.apply(this, arguments);
+      // أضف زر "شكاوى" قبل زر الخروج
+      html = html.replace(
+        '<button class="btn red" onclick="logout()">🚪 تسجيل الخروج</button>',
+        '<button class="btn amber" onclick="setPage(\'complaints\')">📢 الشكاوى</button>' +
+        '<button class="btn red" onclick="logout()">🚪 تسجيل الخروج</button>'
+      );
+      return html;
+    };
+    _new.__acComplaintsPatch = true;
+    window.pages.profile = _new;
+  }
+
+  // ============ زر الشكاوى في لوحة الفني ============
+  function patchTechPanel(){
+    // نضيف زر في صفحة tech_panel
+    var origTechPanel = window.pages && window.pages.tech_panel;
+    if(!origTechPanel || origTechPanel.__acComplaintsPatch) return;
+
+    var _new = function(){
+      var html = origTechPanel.apply(this, arguments);
+      // أضف قسم "شكوى ضد عميل" في tech_panel
+      // ملاحظة: هذا زر فقط، الفني يقدر يضغطه لو محتاج
+      return html.replace(
+        '<h2>👷 لوحة الفني</h2>',
+        '<h2>👷 لوحة الفني</h2>'+
+        '<div class="card" style="border-right:4px solid #f59e0b;margin-bottom:10px">'+
+          '<div class="row between">'+
+            '<div><b>📢 عندك شكوى؟</b><div class="muted-sm">عن عميل أو مشكلة في طلب</div></div>'+
+            '<button class="btn sm amber" onclick="acOpenTechComplaint()">تقديم شكوى</button>'+
+          '</div>'+
+        '</div>'
+      );
+    };
+    _new.__acComplaintsPatch = true;
+    window.pages.tech_panel = _new;
+  }
+
+  // ============ شكوى من الفني ============
+  window.acOpenTechComplaint = async function(){
+    var t = safeRead('session_tech', null);
+    if(!t){ Toast.err('سجل دخول الفني أولاً'); return; }
+
+    var type = prompt('نوع الشكوى:\n1 = العميل\n2 = الشركة\n3 = أخرى', '1');
+    if(!type) return;
+    var typeMap = { '1': 'customer', '2': 'company', '3': 'other' };
+    var finalType = typeMap[type.trim()] || 'other';
+
+    var desc = prompt('اكتب تفاصيل الشكوى:');
+    if(!desc || desc.length < 10){ Toast.err('اكتب وصف أطول'); return; }
+
+    var orderRef = prompt('رقم الطلب (اختياري):') || null;
+
+    var complaint = {
+      tech_phone: t.phone,
+      tech_name: t.name,
+      complaint_type: finalType,
+      complaint: desc,
+      order_ref: orderRef,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      source: 'technician'
+    };
+
+    try {
+      if(!DEMO && db){
+        var r = await db.from('tech_complaints').insert(complaint);
+        if(r.error) throw r.error;
+      }
+      Toast.ok('✅ تم إرسال الشكوى للإدارة');
+    } catch(e){
+      LOG.warn('Tech complaint sync:', e);
+      // احفظ محلي
+      var local = safeRead('tech_complaints_local', []);
+      complaint.id = 'tc_' + Date.now().toString(36);
+      local.unshift(complaint);
+      safeWrite('tech_complaints_local', local);
+      Toast.ok('✅ تم الحفظ محلياً — سيتم المزامنة');
+    }
+  };
+
+  // ============ ربط الـ render hook ============
+  if(typeof registerRenderHook === 'function'){
+    registerRenderHook(function(){
+      if(state.page === 'complaints'){
+        setTimeout(acLoadMyComplaints, 50);
+      }
+    });
+  }
+
+  // ============ تطبيق الـ patches ============
+  function boot(){
+    patchProfile();
+    patchTechPanel();
+    console.log('[HVAC] 📢 Complaints system ready');
+  }
+
+  // انتظر إلى أن تكون pages جاهزة
+  var tries = 0;
+  function waitAndBoot(){
+    tries++;
+    if(typeof window.pages === 'object' && window.pages.profile && window.pages.services){
+      boot();
+    } else if(tries < 40){
+      setTimeout(waitAndBoot, 250);
+    }
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(waitAndBoot, 300); });
+  } else {
+    setTimeout(waitAndBoot, 300);
+  }
+})();
+     </script>
      
 </body>
 </html>
